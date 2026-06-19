@@ -1,0 +1,57 @@
+# ---- Secrets / env ----
+.env
+.env.*
+!.env.example
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+.coverage
+htmlcov/
+.tox/
+
+# ---- Node / Frontend ----
+node_modules/
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.vite/
+.cache/
+coverage/
+*.local
+
+# Vite build output
+apps/web/dist/
+
+# ---- Docker / data volumes ----
+.docker-data/
+pgdata/
+clickhouse-data/
+redis-data/
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
+logs/
