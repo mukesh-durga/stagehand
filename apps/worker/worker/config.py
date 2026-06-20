@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     default_max_steps: int = 25
     default_max_runtime_seconds: int = 120
 
+    # AI providers / models (optional; mock provider is used when keys are absent)
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    cheap_model_name: str = ""
+    strong_model_name: str = ""
+    default_eval_model_name: str = ""
+
     @property
     def database_url(self) -> str:
         return (

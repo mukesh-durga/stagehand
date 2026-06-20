@@ -43,6 +43,14 @@ class WorkflowRun(Base):
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
 
+    # If set, this run is a replay of the referenced original run.
+    replay_of_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("workflow_runs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     input_json: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb"), default=dict
     )

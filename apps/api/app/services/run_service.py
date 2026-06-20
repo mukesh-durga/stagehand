@@ -29,6 +29,7 @@ def _to_response(run: WorkflowRun) -> WorkflowRunResponse:
         workflow_id=run.workflow_id,
         workflow_version_id=run.workflow_version_id,
         status=run.status,
+        replay_of_run_id=run.replay_of_run_id,
         input=run.input_json or {},
         output=run.output_json,
         error_message=run.error_message,
@@ -102,6 +103,45 @@ def get_run(db: Session, run_id: uuid.UUID) -> WorkflowRunResponse:
     if run is None:
         raise RunNotFoundError(str(run_id))
     return _to_response(run)
+
+
+def replay_run(
+    db: Session, redis_client: redis.Redis, run_id: uuid.UUID
+) -> WorkflowRunResponse:
+    """Create a new queued run reusing the original's version and input."""
+    repo = RunRepository(db)
+    original = repo.get(run_id)
+    if original is None:
+        raise RunNotFoundError(str(run_id))
+
+    replay = WorkflowRun(
+        workflow_id=original.workflow_id,
+        # Replay uses the ORIGINAL version, not the workflow's current version.
+        workflow_version_id=original.workflow_version_id,
+        status="queued",
+        input_json=original.input_json or {},
+        replay_of_run_id=original.id,
+    )
+    repo.add(replay)
+    db.commit()
+    db.refresh(replay)
+
+    run_config = _resolve_run_config(None)
+    job = {
+        "run_id": str(replay.id),
+        "workflow_id": str(replay.workflow_id),
+        "workflow_version_id": str(replay.workflow_version_id),
+        "input": replay.input_json or {},
+        "run_config": run_config,
+        "created_at": replay.created_at.isoformat(),
+    }
+    redis_client.rpush(RUN_QUEUE_KEY, json.dumps(job))
+
+    return _to_response(replay)
+
+
+def list_replays(db: Session, run_id: uuid.UUID) -> list[WorkflowRunResponse]:
+    return [_to_response(r) for r in RunRepository(db).list_replays(run_id)]
 
 
 def list_runs(

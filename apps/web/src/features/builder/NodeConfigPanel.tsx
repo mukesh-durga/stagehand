@@ -134,16 +134,59 @@ export function NodeConfigPanel({ node, onChange, onDelete }: NodeConfigPanelPro
               onChange={(e) => onChange({ maxCostUsd: num(e.target.value) })}
             />
           </Field>
+          <Field label="Fallback model">
+            <Select
+              value={config.fallbackModel ?? ""}
+              onChange={(e) => onChange({ fallbackModel: e.target.value })}
+            >
+              <option value="">none</option>
+              <option value="cheap">cheap</option>
+              <option value="strong">strong</option>
+            </Select>
+          </Field>
+          <Field label="Mock fail first N calls (testing)">
+            <Input
+              type="number"
+              value={config.failTimes ?? ""}
+              onChange={(e) => onChange({ failTimes: num(e.target.value) })}
+              placeholder="0"
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={Boolean(config.forceFailure)}
+              onChange={(e) => onChange({ forceFailure: e.target.checked })}
+            />
+            Force mock failure (testing)
+          </label>
         </>
       )}
 
       {type === "tool" && (
         <>
           <Field label="Tool name">
-            <Input
+            <Select
               value={config.toolName ?? ""}
               onChange={(e) => onChange({ toolName: e.target.value })}
-              placeholder="calculator"
+            >
+              <option value="">— select —</option>
+              <option value="calculator">calculator</option>
+              <option value="mock_search">mock_search</option>
+            </Select>
+          </Field>
+          <Field label="Expression (calculator)">
+            <Input
+              value={config.expression ?? ""}
+              onChange={(e) => onChange({ expression: e.target.value })}
+              placeholder="2 + 3 * 4"
+            />
+          </Field>
+          <Field label="Query (mock_search)">
+            <Input
+              value={config.query ?? ""}
+              onChange={(e) => onChange({ query: e.target.value })}
+              placeholder="compare langsmith and phoenix"
             />
           </Field>
           <Field label="Timeout (ms)">

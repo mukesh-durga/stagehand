@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db.models.run import WorkflowRun
 from app.db.redis import RUN_QUEUE_KEY, get_redis
 from app.main import app
 
@@ -155,3 +156,99 @@ def test_run_config_overrides(client: TestClient, fake_redis: FakeRedis) -> None
     assert job["run_config"]["max_cost_usd"] == 0.01
     # unspecified field falls back to settings default
     assert job["run_config"]["max_runtime_seconds"] == 120
+
+
+# --- replay (Milestone 12) ---
+
+def _run_for(client: TestClient, wf: dict[str, Any], inp: dict[str, Any]) -> dict[str, Any]:
+    return client.post(f"/workflows/{wf['id']}/run", json={"input": inp}).json()
+
+
+def test_replay_creates_queued_run(client: TestClient, fake_redis: FakeRedis) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {"query": "hi"})
+    resp = client.post(f"/runs/{original['id']}/replay")
+    assert resp.status_code == 201, resp.text
+    replay = resp.json()
+    assert replay["status"] == "queued"
+    assert replay["id"] != original["id"]
+    assert replay["replay_of_run_id"] == original["id"]
+
+
+def test_replay_failed_run(client: TestClient, db_session, fake_redis: FakeRedis) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {})
+    # Force the original into a failed state.
+    row = db_session.get(WorkflowRun, uuid.UUID(original["id"]))
+    row.status = "failed"
+    db_session.commit()
+
+    resp = client.post(f"/runs/{original['id']}/replay")
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "queued"
+
+
+def test_replay_uses_original_version_not_current(
+    client: TestClient, fake_redis: FakeRedis
+) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {})
+    original_version = original["workflow_version_id"]
+
+    # Update the workflow graph -> creates v2, current_version_id changes.
+    new_graph = valid_graph()
+    new_graph["nodes"].append(
+        {"id": "ag1", "type": "agent", "position": {"x": 100, "y": 0}, "config": {}}
+    )
+    new_graph["edges"] = [
+        {"id": "e1", "source": "in1", "target": "ag1"},
+        {"id": "e2", "source": "ag1", "target": "out1"},
+    ]
+    updated = client.put(f"/workflows/{wf['id']}", json={"graph": new_graph}).json()
+    assert updated["current_version_id"] != original_version
+
+    replay = client.post(f"/runs/{original['id']}/replay").json()
+    assert replay["workflow_version_id"] == original_version
+    assert replay["workflow_version_id"] != updated["current_version_id"]
+
+
+def test_replay_copies_input(client: TestClient, fake_redis: FakeRedis) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {"query": "copy me"})
+    replay = client.post(f"/runs/{original['id']}/replay").json()
+    assert replay["input"] == {"query": "copy me"}
+
+
+def test_replay_pushes_redis_job(client: TestClient, fake_redis: FakeRedis) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {"query": "x"})
+    fake_redis.lists.clear()  # ignore the original run's job
+    replay = client.post(f"/runs/{original['id']}/replay").json()
+
+    assert len(fake_redis.lists[RUN_QUEUE_KEY]) == 1
+    job = json.loads(fake_redis.lists[RUN_QUEUE_KEY][0])
+    assert job["run_id"] == replay["id"]
+    assert job["workflow_version_id"] == original["workflow_version_id"]
+    assert job["input"] == {"query": "x"}
+
+
+def test_replay_missing_run_404(client: TestClient, fake_redis: FakeRedis) -> None:
+    assert client.post(f"/runs/{uuid.uuid4()}/replay").status_code == 404
+
+
+def test_get_run_includes_replay_field(client: TestClient, fake_redis: FakeRedis) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {})
+    fetched = client.get(f"/runs/{original['id']}").json()
+    assert "replay_of_run_id" in fetched
+    assert fetched["replay_of_run_id"] is None
+
+
+def test_list_replays(client: TestClient, fake_redis: FakeRedis) -> None:
+    wf = _create_workflow(client)
+    original = _run_for(client, wf, {})
+    replay = client.post(f"/runs/{original['id']}/replay").json()
+    resp = client.get(f"/runs/{original['id']}/replays")
+    assert resp.status_code == 200
+    replays = resp.json()
+    assert [r["id"] for r in replays] == [replay["id"]]

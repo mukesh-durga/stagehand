@@ -1,9 +1,13 @@
 import type {
   DbHealthResponse,
+  EvalRequest,
+  EvalResult,
   HealthResponse,
+  RunDiffResponse,
+  TraceEvent,
   Workflow,
   WorkflowCreatePayload,
-  WorkflowRunResponse,
+  WorkflowRun,
   WorkflowUpdatePayload,
   WorkflowVersion,
 } from "@/types";
@@ -106,9 +110,50 @@ export function getWorkflowVersions(id: string): Promise<WorkflowVersion[]> {
 export function createRun(
   workflowId: string,
   input: Record<string, unknown>,
-): Promise<WorkflowRunResponse> {
-  return request<WorkflowRunResponse>(`/workflows/${workflowId}/run`, {
+): Promise<WorkflowRun> {
+  return request<WorkflowRun>(`/workflows/${workflowId}/run`, {
     method: "POST",
     body: JSON.stringify({ input }),
   });
+}
+
+export function getRun(runId: string): Promise<WorkflowRun> {
+  return request<WorkflowRun>(`/runs/${runId}`);
+}
+
+export function getRunTrace(runId: string): Promise<TraceEvent[]> {
+  return request<TraceEvent[]>(`/runs/${runId}/trace`);
+}
+
+export function listRuns(workflowId?: string): Promise<WorkflowRun[]> {
+  const qs = workflowId ? `?workflow_id=${encodeURIComponent(workflowId)}` : "";
+  return request<WorkflowRun[]>(`/runs${qs}`);
+}
+
+export function replayRun(runId: string): Promise<WorkflowRun> {
+  return request<WorkflowRun>(`/runs/${runId}/replay`, { method: "POST" });
+}
+
+export function getRunReplays(runId: string): Promise<WorkflowRun[]> {
+  return request<WorkflowRun[]>(`/runs/${runId}/replays`);
+}
+
+export function diffRuns(
+  runId: string,
+  otherRunId: string,
+): Promise<RunDiffResponse> {
+  return request<RunDiffResponse>(`/runs/${runId}/diff/${otherRunId}`);
+}
+
+// --- evals ---
+
+export function runEval(runId: string, payload: EvalRequest): Promise<EvalResult[]> {
+  return request<EvalResult[]>(`/runs/${runId}/eval`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getRunEvals(runId: string): Promise<EvalResult[]> {
+  return request<EvalResult[]>(`/runs/${runId}/evals`);
 }

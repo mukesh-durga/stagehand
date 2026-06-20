@@ -15,3 +15,11 @@ class RunNotFoundError(Exception):
 
 class WorkflowNotReadyError(Exception):
     """Raised when a workflow has no current version to run (-> HTTP 409)."""
+
+
+class RunNotEvaluatableError(Exception):
+    """Raised when a run is not in a state that can be evaluated (-> HTTP 409)."""
+
+
+class UnknownEvalTypeError(Exception):
+    """Raised when an unknown eval type is requested (-> HTTP 400)."""

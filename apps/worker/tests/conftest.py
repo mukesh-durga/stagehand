@@ -58,6 +58,48 @@ def agent_graph() -> dict[str, Any]:
     }
 
 
+def tool_graph(tool_name: str = "calculator") -> dict[str, Any]:
+    """Input -> Tool -> Output."""
+    return {
+        "nodes": [
+            {"id": "in1", "type": "input", "position": {"x": 0, "y": 0}, "config": {}},
+            {
+                "id": "t1",
+                "type": "tool",
+                "position": {"x": 150, "y": 0},
+                "config": {"toolName": tool_name, "expression": "3 + 4"},
+            },
+            {"id": "out1", "type": "output", "position": {"x": 300, "y": 0}, "config": {}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "in1", "target": "t1"},
+            {"id": "e2", "source": "t1", "target": "out1"},
+        ],
+    }
+
+
+def agent_tool_graph() -> dict[str, Any]:
+    """Input -> Agent -> Tool -> Output."""
+    return {
+        "nodes": [
+            {"id": "in1", "type": "input", "position": {"x": 0, "y": 0}, "config": {}},
+            {"id": "ag1", "type": "agent", "position": {"x": 120, "y": 0}, "config": {}},
+            {
+                "id": "t1",
+                "type": "tool",
+                "position": {"x": 240, "y": 0},
+                "config": {"toolName": "calculator", "expression": "2 * 5"},
+            },
+            {"id": "out1", "type": "output", "position": {"x": 360, "y": 0}, "config": {}},
+        ],
+        "edges": [
+            {"id": "e1", "source": "in1", "target": "ag1"},
+            {"id": "e2", "source": "ag1", "target": "t1"},
+            {"id": "e3", "source": "t1", "target": "out1"},
+        ],
+    }
+
+
 @pytest.fixture
 def make_run(db_session: Session):
     """Factory creating a workflow + version + queued run in the test DB."""

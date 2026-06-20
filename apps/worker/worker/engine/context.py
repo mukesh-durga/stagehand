@@ -20,6 +20,8 @@ class ExecutionContext:
     step_count: int = 0
     started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     _started_monotonic: float = field(default_factory=time.monotonic)
+    # TraceEmitter for nodes to emit model/tool events (set by the orchestrator).
+    emitter: Any = None
 
     def elapsed_seconds(self) -> float:
         return time.monotonic() - self._started_monotonic

@@ -143,6 +143,11 @@ Endpoints:
 | POST | `/workflows/{id}/run` | Create a queued run + enqueue Redis job → `run_id` |
 | GET | `/runs` | List recent runs (optional `?workflow_id=`) |
 | GET | `/runs/{run_id}` | Get a run by id |
+| POST | `/runs/{run_id}/replay` | Re-run with the original version + input; links `replay_of_run_id` |
+| GET | `/runs/{run_id}/replays` | Runs that are replays of this run |
+| GET | `/runs/{run_id}/diff/{other_run_id}` | Compare two runs (summary, node/event/output diffs) |
+| POST | `/runs/{run_id}/eval` | Score a run with evaluators; stores `eval_results` |
+| GET | `/runs/{run_id}/evals` | Eval results for a run (newest first) |
 | GET | `/runs/{run_id}/trace` | Trace events for a run (from ClickHouse), ordered by time |
 | WS | `/ws/runs/{run_id}` | Live trace stream (replays + streams `run:{run_id}:events`) |
 
@@ -160,7 +165,11 @@ npm run build                 # production build to dist/
 ```
 
 Routes: `/` → `/dashboard`, `/workflows`, `/workflows/new`, `/workflows/:id/builder`,
-`/settings`. The dashboard calls `/health` and `/health/db` and shows API/DB status.
+`/runs`, `/runs/:runId`, `/settings`. The dashboard calls `/health` and `/health/db`
+and shows API/DB status. `/runs/:runId` is the run detail page (status, metrics,
+input/output, full trace timeline, and a click-through event detail panel); reach it
+from the **Runs** sidebar tab or the **Open run details** link in the builder's live
+trace panel after a run.
 The builder (`/workflows/new`, `/workflows/:id/builder`) is a React Flow canvas for
 designing Input/Agent/Tool/Router/Output nodes, with a node config panel and
 save/load wired to the `/workflows` API. Start the backend first.
@@ -189,9 +198,24 @@ End-to-end: save a workflow → `POST /workflows/{id}/run` (status `queued`) →
 the worker → run becomes `completed` and `GET /runs/{run_id}` returns `output`.
 
 During execution the worker emits trace events (`run_started`, `node_started`,
-`node_completed`/`node_failed`, `run_completed`/`run_failed`). Each event is pushed to
-a Redis list `run:{run_id}:events` (for live streaming in Milestone 8) and inserted
-into the ClickHouse `trace_events` table. Fetch a run's trace via
+`node_completed`/`node_failed`, `run_completed`/`run_failed`, plus `model_called`/
+`model_completed` for agent nodes and `tool_called`/`tool_completed`/`tool_failed`
+for tool nodes). Each event is pushed to a Redis list `run:{run_id}:events` (for
+live streaming) and inserted into the ClickHouse `trace_events` table.
+
+**Agent nodes** call a model provider (default: a deterministic `MockModelProvider`,
+so no API keys are required locally; set `OPENAI_API_KEY` + `CHEAP_MODEL_NAME`/
+`STRONG_MODEL_NAME` to use OpenAI). **Tool nodes** run safe registered tools
+(`calculator` — AST-based arithmetic, no `eval`; `mock_search` — deterministic
+results). Set a tool node's `Tool name` and its `Expression`/`Query` in the config
+panel.
+
+Model and tool calls are wrapped in a `RetryManager` (per-node `maxRetries`,
+`timeoutMs`, exponential backoff). On failure the worker emits `retry_scheduled`
+before each retry; if an agent's retries are exhausted and a `fallbackModel` is
+set, it emits `fallback_used` and tries the fallback. To exercise this locally,
+an agent node's config panel exposes mock-only triggers (**Fail first N calls**,
+**Force mock failure**) and a **Fallback model** selector. Fetch a run's trace via
 `GET /runs/{run_id}/trace`. Trace persistence is best-effort — a Redis/ClickHouse
 outage logs a warning but never fails the run.
 
@@ -220,4 +244,10 @@ This project is built milestone-by-milestone (see `CLAUDE.md`).
 - [x] **Milestone 6** — Worker and basic engine (consume jobs, validate, topological execution, status updates)
 - [x] **Milestone 7** — Trace event pipeline (emit → Redis + ClickHouse, trace retrieval API)
 - [x] **Milestone 8** — WebSocket live tracing (WS endpoint, builder Run button, live panel, node status)
-- [ ] **Milestone 9** — Agent and tool nodes (model provider, real tools)
+- [x] **Milestone 9** — Agent & tool nodes (model provider abstraction, calculator/mock_search, model/tool trace events)
+- [x] **Milestone 10** — Retry & fallback (RetryManager, timeouts, fallback model, retry_scheduled/fallback_used events)
+- [x] **Milestone 11** — Run detail page (`/runs`, `/runs/:runId`: metadata, metrics, I/O, trace timeline, event detail)
+- [x] **Milestone 12** — Replay (replay endpoint, `replay_of_run_id` linkage, Run Detail replay button + replays list)
+- [x] **Milestone 13** — Diff (diff endpoint + service, `/runs/:a/diff/:b` page, original↔replay compare links)
+- [x] **Milestone 14** — Eval harness (`eval_results`, 6 evaluators, eval endpoints, Run Detail eval section)
+- [ ] **Milestone 15** — UCB model router

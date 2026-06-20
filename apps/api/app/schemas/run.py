@@ -25,6 +25,7 @@ class WorkflowRunResponse(BaseModel):
     workflow_id: uuid.UUID
     workflow_version_id: uuid.UUID
     status: str
+    replay_of_run_id: uuid.UUID | None
     input: dict[str, Any]
     output: dict[str, Any] | None
     error_message: str | None

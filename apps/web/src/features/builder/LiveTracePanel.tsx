@@ -1,4 +1,5 @@
-import { X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ interface LiveTracePanelProps {
 function eventBadgeVariant(eventType: string) {
   if (eventType.endsWith("_failed")) return "destructive" as const;
   if (eventType.endsWith("_completed")) return "success" as const;
+  if (eventType === "retry_scheduled" || eventType === "fallback_used")
+    return "muted" as const;
   return "default" as const;
 }
 
@@ -37,9 +40,17 @@ export function LiveTracePanel({ runId, runStatus, events, onClose }: LiveTraceP
             {runStatus}
           </Badge>
         </div>
-        <Button size="icon" variant="ghost" onClick={onClose} title="Close">
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/runs/${runId}`}
+            className="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-secondary"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Open run details
+          </Link>
+          <Button size="icon" variant="ghost" onClick={onClose} title="Close">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-3 font-mono text-xs">
@@ -51,6 +62,13 @@ export function LiveTracePanel({ runId, runStatus, events, onClose }: LiveTraceP
               <li key={e.event_id} className="flex items-center gap-2">
                 <Badge variant={eventBadgeVariant(e.event_type)}>{e.event_type}</Badge>
                 {e.node_id && <span className="text-muted-foreground">{e.node_id}</span>}
+                {e.model_name && <span className="text-violet-400">{e.model_name}</span>}
+                {e.tool_name && <span className="text-amber-400">{e.tool_name}</span>}
+                {typeof e.metadata_json?.attempt === "number" && (
+                  <span className="text-muted-foreground">
+                    attempt {e.metadata_json.attempt}
+                  </span>
+                )}
                 <span
                   className={cn(
                     e.status === "success" && "text-success",
@@ -59,6 +77,16 @@ export function LiveTracePanel({ runId, runStatus, events, onClose }: LiveTraceP
                 >
                   {e.status}
                 </span>
+                {e.input_tokens + e.output_tokens > 0 && (
+                  <span className="text-muted-foreground">
+                    {e.input_tokens}/{e.output_tokens} tok
+                  </span>
+                )}
+                {e.estimated_cost_usd > 0 && (
+                  <span className="text-muted-foreground">
+                    ${e.estimated_cost_usd.toFixed(4)}
+                  </span>
+                )}
                 {e.latency_ms > 0 && (
                   <span className="text-muted-foreground">{e.latency_ms}ms</span>
                 )}

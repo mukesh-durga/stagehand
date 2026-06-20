@@ -10,11 +10,15 @@ from sqlalchemy.orm import Session
 from app.db.clickhouse import get_clickhouse
 from app.db.postgres import get_db
 from app.db.redis import get_redis
+from app.schemas.diff import RunDiffResponse
+from app.schemas.eval import EvalRequest, EvalResultResponse
 from app.schemas.run import WorkflowRunCreate, WorkflowRunResponse
 from app.schemas.trace import TraceEventResponse
-from app.services import run_service, trace_service
+from app.services import diff_service, eval_service, run_service, trace_service
 from app.services.exceptions import (
+    RunNotEvaluatableError,
     RunNotFoundError,
+    UnknownEvalTypeError,
     WorkflowNotFoundError,
     WorkflowNotReadyError,
 )
@@ -58,6 +62,77 @@ def get_run(run_id: uuid.UUID, db: Session = Depends(get_db)) -> WorkflowRunResp
         return run_service.get_run(db, run_id)
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+
+
+@router.post(
+    "/runs/{run_id}/replay",
+    response_model=WorkflowRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def replay_run(
+    run_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    redis_client: redis.Redis = Depends(get_redis),
+) -> WorkflowRunResponse:
+    try:
+        return run_service.replay_run(db, redis_client, run_id)
+    except RunNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+
+
+@router.get("/runs/{run_id}/replays", response_model=list[WorkflowRunResponse])
+def list_replays(
+    run_id: uuid.UUID, db: Session = Depends(get_db)
+) -> list[WorkflowRunResponse]:
+    return run_service.list_replays(db, run_id)
+
+
+@router.get(
+    "/runs/{run_id}/diff/{other_run_id}", response_model=RunDiffResponse
+)
+def diff_runs(
+    run_id: uuid.UUID,
+    other_run_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    clickhouse_client: Client = Depends(get_clickhouse),
+) -> RunDiffResponse:
+    try:
+        return diff_service.diff_runs(db, clickhouse_client, run_id, other_run_id)
+    except RunNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+
+
+@router.post(
+    "/runs/{run_id}/eval",
+    response_model=list[EvalResultResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def run_eval(
+    run_id: uuid.UUID,
+    payload: EvalRequest | None = None,
+    db: Session = Depends(get_db),
+    clickhouse_client: Client = Depends(get_clickhouse),
+) -> list[EvalResultResponse]:
+    try:
+        return eval_service.run_eval(db, clickhouse_client, run_id, payload or EvalRequest())
+    except RunNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
+    except RunNotEvaluatableError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Run must be completed or failed to evaluate",
+        )
+    except UnknownEvalTypeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown eval type: {exc}"
+        )
+
+
+@router.get("/runs/{run_id}/evals", response_model=list[EvalResultResponse])
+def list_evals(
+    run_id: uuid.UUID, db: Session = Depends(get_db)
+) -> list[EvalResultResponse]:
+    return eval_service.list_evals(db, run_id)
 
 
 @router.get("/runs/{run_id}/trace", response_model=list[TraceEventResponse])

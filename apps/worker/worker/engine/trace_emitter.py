@@ -142,3 +142,112 @@ class TraceEmitter:
         return self.emit(
             "run_failed", "failed", error_message=error_message, latency_ms=latency_ms
         )
+
+    # --- model events (Milestone 9) ---
+
+    def emit_model_called(
+        self, node_id: str, model_name: str, metadata: dict[str, Any] | None = None
+    ) -> TraceEvent:
+        return self.emit(
+            "model_called", "running", node_id=node_id, model_name=model_name, metadata=metadata
+        )
+
+    def emit_model_completed(
+        self,
+        node_id: str,
+        model_name: str,
+        *,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        estimated_cost_usd: float = 0.0,
+        latency_ms: int = 0,
+        metadata: dict[str, Any] | None = None,
+    ) -> TraceEvent:
+        return self.emit(
+            "model_completed",
+            "success",
+            node_id=node_id,
+            model_name=model_name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            estimated_cost_usd=estimated_cost_usd,
+            latency_ms=latency_ms,
+            metadata=metadata,
+        )
+
+    # --- tool events (Milestone 9) ---
+
+    def emit_tool_called(
+        self, node_id: str, tool_name: str, metadata: dict[str, Any] | None = None
+    ) -> TraceEvent:
+        return self.emit(
+            "tool_called", "running", node_id=node_id, tool_name=tool_name, metadata=metadata
+        )
+
+    def emit_tool_completed(
+        self,
+        node_id: str,
+        tool_name: str,
+        *,
+        latency_ms: int = 0,
+        metadata: dict[str, Any] | None = None,
+    ) -> TraceEvent:
+        return self.emit(
+            "tool_completed",
+            "success",
+            node_id=node_id,
+            tool_name=tool_name,
+            latency_ms=latency_ms,
+            metadata=metadata,
+        )
+
+    def emit_tool_failed(
+        self, node_id: str, tool_name: str, error_message: str, *, latency_ms: int = 0
+    ) -> TraceEvent:
+        return self.emit(
+            "tool_failed",
+            "failed",
+            node_id=node_id,
+            tool_name=tool_name,
+            error_message=error_message,
+            latency_ms=latency_ms,
+        )
+
+    # --- retry / fallback events (Milestone 10) ---
+
+    def emit_retry_scheduled(
+        self,
+        node_id: str,
+        *,
+        attempt: int,
+        max_retries: int,
+        reason: str = "",
+        next_delay_ms: int = 0,
+        model_name: str = "",
+        tool_name: str = "",
+    ) -> TraceEvent:
+        return self.emit(
+            "retry_scheduled",
+            "running",
+            node_id=node_id,
+            model_name=model_name,
+            tool_name=tool_name,
+            error_message=reason[:300],
+            metadata={
+                "attempt": attempt,
+                "max_retries": max_retries,
+                "next_delay_ms": next_delay_ms,
+            },
+        )
+
+    def emit_fallback_used(
+        self, node_id: str, *, fallback_model: str, reason: str = ""
+    ) -> TraceEvent:
+        return self.emit(
+            "fallback_used",
+            "running",
+            node_id=node_id,
+            model_name=fallback_model,
+            error_message=reason[:300],
+            metadata={"fallback_model": fallback_model},
+        )

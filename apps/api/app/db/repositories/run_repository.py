@@ -26,3 +26,11 @@ class RunRepository:
             stmt = stmt.where(WorkflowRun.workflow_id == workflow_id)
         stmt = stmt.order_by(WorkflowRun.created_at.desc()).limit(limit)
         return list(self.db.scalars(stmt))
+
+    def list_replays(self, run_id: uuid.UUID) -> list[WorkflowRun]:
+        stmt = (
+            select(WorkflowRun)
+            .where(WorkflowRun.replay_of_run_id == run_id)
+            .order_by(WorkflowRun.created_at.desc())
+        )
+        return list(self.db.scalars(stmt))

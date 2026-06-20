@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-# Event types supported in this milestone.
+# Event types supported so far.
 EVENT_TYPES = {
     "run_started",
     "node_started",
@@ -13,6 +13,15 @@ EVENT_TYPES = {
     "node_failed",
     "run_completed",
     "run_failed",
+    # Milestone 9: model and tool calls.
+    "model_called",
+    "model_completed",
+    "tool_called",
+    "tool_completed",
+    "tool_failed",
+    # Milestone 10: retry and fallback.
+    "retry_scheduled",
+    "fallback_used",
 }
 
 
