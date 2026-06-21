@@ -148,6 +148,12 @@ Endpoints:
 | GET | `/runs/{run_id}/diff/{other_run_id}` | Compare two runs (summary, node/event/output diffs) |
 | POST | `/runs/{run_id}/eval` | Score a run with evaluators; stores `eval_results` |
 | GET | `/runs/{run_id}/evals` | Eval results for a run (newest first) |
+| GET | `/routing/stats` | Adaptive-routing (UCB) stats, optionally filtered |
+| GET | `/routing/stats/{route_key}` | Routing stats for one route key |
+| POST | `/routing/stats/reset` | Dev helper: clear all routing stats |
+| GET | `/templates` | List public workflow templates |
+| GET | `/templates/{slug}` | Get one template |
+| POST | `/templates/{slug}/clone` | Clone a template into a new editable workflow |
 | GET | `/runs/{run_id}/trace` | Trace events for a run (from ClickHouse), ordered by time |
 | WS | `/ws/runs/{run_id}` | Live trace stream (replays + streams `run:{run_id}:events`) |
 
@@ -165,8 +171,10 @@ npm run build                 # production build to dist/
 ```
 
 Routes: `/` → `/dashboard`, `/workflows`, `/workflows/new`, `/workflows/:id/builder`,
-`/runs`, `/runs/:runId`, `/settings`. The dashboard calls `/health` and `/health/db`
-and shows API/DB status. `/runs/:runId` is the run detail page (status, metrics,
+`/runs`, `/runs/:runId`, `/templates`, `/routing`, `/settings`. The dashboard calls
+`/health` and `/health/db` and shows API/DB status. `/templates` is the gallery —
+clone a seeded template (Basic Agent, Tool Calculator, Agent With Retry, Adaptive
+Agent) into a new editable workflow that opens in the builder. `/runs/:runId` is the run detail page (status, metrics,
 input/output, full trace timeline, and a click-through event detail panel); reach it
 from the **Runs** sidebar tab or the **Open run details** link in the builder's live
 trace panel after a run.
@@ -210,6 +218,13 @@ so no API keys are required locally; set `OPENAI_API_KEY` + `CHEAP_MODEL_NAME`/
 results). Set a tool node's `Tool name` and its `Expression`/`Query` in the config
 panel.
 
+An agent node's `modelPolicy` selects the model: `cheap`/`strong` use the configured
+model directly; **`adaptive`** uses a **UCB bandit** (`worker/ai/ucb_router.py`) that
+picks between the cheap and strong models per route (`workflow:version:node`),
+emitting a `routing_decision` trace event. When a run is evaluated, its reward
+(`0.7·quality + 0.2·latency + 0.1·cost`) updates `model_routing_stats` (once per run).
+The `/routing` page shows per-model pulls, average reward, latency, cost, and quality.
+
 Model and tool calls are wrapped in a `RetryManager` (per-node `maxRetries`,
 `timeoutMs`, exponential backoff). On failure the worker emits `retry_scheduled`
 before each retry; if an agent's retries are exhausted and a `fallbackModel` is
@@ -250,4 +265,6 @@ This project is built milestone-by-milestone (see `CLAUDE.md`).
 - [x] **Milestone 12** — Replay (replay endpoint, `replay_of_run_id` linkage, Run Detail replay button + replays list)
 - [x] **Milestone 13** — Diff (diff endpoint + service, `/runs/:a/diff/:b` page, original↔replay compare links)
 - [x] **Milestone 14** — Eval harness (`eval_results`, 6 evaluators, eval endpoints, Run Detail eval section)
-- [ ] **Milestone 15** — UCB model router
+- [x] **Milestone 15** — UCB model router (`model_routing_stats`, UCB selection, `routing_decision` traces, `/routing` dashboard)
+- [x] **Milestone 16** — Template gallery (`templates` table, startup seed, gallery page, clone-to-workflow)
+- [ ] **Milestone 17** — Stripe test mode (usage dashboard)

@@ -1,4 +1,11 @@
-import { Activity, LayoutDashboard, Settings, Workflow } from "lucide-react";
+import {
+  Activity,
+  LayoutDashboard,
+  LayoutTemplate,
+  Settings,
+  Split,
+  Workflow,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
@@ -6,7 +13,9 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/workflows", label: "Workflows", icon: Workflow },
+  { to: "/templates", label: "Templates", icon: LayoutTemplate },
   { to: "/runs", label: "Runs", icon: Activity },
+  { to: "/routing", label: "Routing", icon: Split },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

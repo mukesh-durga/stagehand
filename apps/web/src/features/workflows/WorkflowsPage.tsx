@@ -55,9 +55,14 @@ export function WorkflowsPage() {
             Design and manage your multi-agent workflows.
           </p>
         </div>
-        <Button onClick={() => navigate("/workflows/new")}>
-          <Plus className="h-4 w-4" /> New workflow
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate("/templates")}>
+            Start from template
+          </Button>
+          <Button onClick={() => navigate("/workflows/new")}>
+            <Plus className="h-4 w-4" /> New workflow
+          </Button>
+        </div>
       </div>
 
       {error && (

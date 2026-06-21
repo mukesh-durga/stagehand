@@ -22,6 +22,8 @@ EVENT_TYPES = {
     # Milestone 10: retry and fallback.
     "retry_scheduled",
     "fallback_used",
+    # Milestone 15: adaptive routing.
+    "routing_decision",
 }
 
 

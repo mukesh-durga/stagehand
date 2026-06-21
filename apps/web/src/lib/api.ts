@@ -1,9 +1,12 @@
 import type {
+  CloneTemplateRequest,
   DbHealthResponse,
   EvalRequest,
   EvalResult,
   HealthResponse,
+  RoutingStat,
   RunDiffResponse,
+  Template,
   TraceEvent,
   Workflow,
   WorkflowCreatePayload,
@@ -156,4 +159,30 @@ export function runEval(runId: string, payload: EvalRequest): Promise<EvalResult
 
 export function getRunEvals(runId: string): Promise<EvalResult[]> {
   return request<EvalResult[]>(`/runs/${runId}/evals`);
+}
+
+// --- routing ---
+
+export function getRoutingStats(): Promise<RoutingStat[]> {
+  return request<RoutingStat[]>("/routing/stats");
+}
+
+// --- templates ---
+
+export function listTemplates(): Promise<Template[]> {
+  return request<Template[]>("/templates");
+}
+
+export function getTemplate(slug: string): Promise<Template> {
+  return request<Template>(`/templates/${slug}`);
+}
+
+export function cloneTemplate(
+  slug: string,
+  payload: CloneTemplateRequest = {},
+): Promise<Workflow> {
+  return request<Workflow>(`/templates/${slug}/clone`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

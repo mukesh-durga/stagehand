@@ -224,3 +224,45 @@ export interface EvalResult {
   metadata_json: Record<string, unknown>;
   created_at: string;
 }
+
+// --- templates (Milestone 16) ---
+
+export interface Template {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  tags: string[];
+  graph: WorkflowGraph;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CloneTemplateRequest {
+  name?: string;
+  description?: string;
+}
+
+// --- routing stats (Milestone 15) ---
+
+export interface RoutingStat {
+  id: string;
+  workflow_id: string | null;
+  workflow_version_id: string | null;
+  node_id: string | null;
+  model_name: string;
+  route_key: string;
+  pulls: number;
+  total_reward: number;
+  average_reward: number;
+  total_latency_ms: number;
+  average_latency_ms: number;
+  total_cost_usd: number;
+  average_cost_usd: number;
+  total_quality_score: number;
+  average_quality_score: number;
+  created_at: string;
+  updated_at: string;
+}

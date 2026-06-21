@@ -3,9 +3,10 @@
 import json
 from typing import Any
 
-from worker.ai.model_router import get_provider, resolve_model_name, select
+from worker.ai.model_router import get_provider, resolve_model_name
 from worker.ai.providers.base import ModelResponse
 from worker.ai.providers.mock_provider import MockModelProvider
+from worker.ai.ucb_router import select_model
 from worker.config import get_settings
 from worker.engine.context import ExecutionContext
 from worker.engine.nodes.base import NodeExecutor
@@ -52,7 +53,35 @@ class AgentNode(NodeExecutor):
         fallback_model = config.get("fallbackModel") or config.get("fallback_model")
 
         settings = get_settings()
-        provider, model_name = select(policy, settings)
+        emitter = context.emitter
+        provider = get_provider(settings)
+
+        if policy == "adaptive":
+            cheap = resolve_model_name("cheap", settings)
+            strong = resolve_model_name("strong", settings)
+            route_key = (
+                f"{context.workflow_id}:{context.workflow_version_id}:{node_id}"
+            )
+            model_name, ucb_scores, reason = select_model(
+                getattr(context, "db", None),
+                route_key,
+                [cheap, strong],
+                settings.ucb_exploration_weight,
+            )
+            if emitter is not None:
+                emitter.emit_routing_decision(
+                    node_id,
+                    route_key=route_key,
+                    policy=policy,
+                    selected_model=model_name,
+                    candidate_models=[cheap, strong],
+                    ucb_scores=ucb_scores,
+                    reason=reason,
+                    exploration_weight=settings.ucb_exploration_weight,
+                )
+        else:
+            model_name = resolve_model_name(policy, settings)
+
         # Test-only deterministic failure triggers (mock provider only).
         if isinstance(provider, MockModelProvider):
             provider.fail_times = int(config.get("failTimes") or 0)
@@ -62,7 +91,6 @@ class AgentNode(NodeExecutor):
             {"role": "system", "content": prompt},
             {"role": "user", "content": _stringify(node_input)},
         ]
-        emitter = context.emitter
 
         def make_on_attempt(model: str, fallback: bool):
             def _on_attempt(attempt: int) -> None:

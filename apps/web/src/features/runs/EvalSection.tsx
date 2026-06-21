@@ -64,6 +64,9 @@ export function EvalSection({ runId }: { runId: string }) {
         </Button>
       </CardHeader>
       <CardContent>
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          Eval results may update adaptive routing stats.
+        </p>
         {error && <div className="mb-2 text-sm text-destructive">{error}</div>}
         {evals.length === 0 ? (
           <span className="text-sm text-muted-foreground">

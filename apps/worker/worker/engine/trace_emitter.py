@@ -251,3 +251,33 @@ class TraceEmitter:
             error_message=reason[:300],
             metadata={"fallback_model": fallback_model},
         )
+
+    # --- routing events (Milestone 15) ---
+
+    def emit_routing_decision(
+        self,
+        node_id: str,
+        *,
+        route_key: str,
+        policy: str,
+        selected_model: str,
+        candidate_models: list[str],
+        ucb_scores: dict[str, float] | None = None,
+        reason: str = "",
+        exploration_weight: float = 1.0,
+    ) -> TraceEvent:
+        return self.emit(
+            "routing_decision",
+            "running",
+            node_id=node_id,
+            model_name=selected_model,
+            metadata={
+                "route_key": route_key,
+                "policy": policy,
+                "selected_model": selected_model,
+                "candidate_models": candidate_models,
+                "ucb_scores": ucb_scores or {},
+                "reason": reason,
+                "exploration_weight": exploration_weight,
+            },
+        )

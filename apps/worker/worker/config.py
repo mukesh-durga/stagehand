@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     strong_model_name: str = ""
     default_eval_model_name: str = ""
 
+    # UCB adaptive routing
+    ucb_exploration_weight: float = 1.0
+
     @property
     def database_url(self) -> str:
         return (

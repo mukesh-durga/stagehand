@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Any
 
 from clickhouse_connect.driver.client import Client
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.clickhouse import ensure_trace_table, query_run_trace_events
@@ -18,6 +18,7 @@ from app.db.models.eval import EvalResult
 from app.db.models.run import WorkflowRun
 from app.db.repositories.run_repository import RunRepository
 from app.schemas.eval import DEFAULT_EVAL_TYPES, EVAL_TYPES, EvalRequest, EvalResultResponse
+from app.services import routing_service
 from app.services.diff_service import _rows_to_dicts
 from app.services.exceptions import (
     RunNotEvaluatableError,
@@ -193,11 +194,15 @@ def run_eval(
     if unknown:
         raise UnknownEvalTypeError(", ".join(unknown))
 
-    # Trace events are only needed for tool_usage.
-    events: list[dict] = []
-    if "tool_usage" in eval_types:
-        ensure_trace_table(clickhouse_client)
-        events = _rows_to_dicts(query_run_trace_events(clickhouse_client, str(run_id)))
+    # Whether this is the first eval for the run (gates routing-stats updates,
+    # avoiding double-counting on repeated evals).
+    existing = db.scalar(
+        select(func.count()).select_from(EvalResult).where(EvalResult.run_id == run_id)
+    )
+
+    # Trace events are needed for tool_usage and for routing-stats updates.
+    ensure_trace_table(clickhouse_client)
+    events = _rows_to_dicts(query_run_trace_events(clickhouse_client, str(run_id)))
 
     rows: list[EvalResult] = []
     for eval_type in eval_types:
@@ -215,6 +220,11 @@ def run_eval(
     db.commit()
     for row in rows:
         db.refresh(row)
+
+    if not existing:
+        routing_service.update_routing_stats_from_run(db, run, rows, events)
+        db.commit()
+
     return [_to_response(r) for r in rows]
 
 

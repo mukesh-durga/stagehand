@@ -22,6 +22,8 @@ class ExecutionContext:
     _started_monotonic: float = field(default_factory=time.monotonic)
     # TraceEmitter for nodes to emit model/tool events (set by the orchestrator).
     emitter: Any = None
+    # DB session for nodes that need persistence (e.g. UCB routing reads).
+    db: Any = None
 
     def elapsed_seconds(self) -> float:
         return time.monotonic() - self._started_monotonic

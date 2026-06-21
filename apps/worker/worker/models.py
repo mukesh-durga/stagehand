@@ -10,6 +10,7 @@ from typing import Any
 
 from sqlalchemy import (
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -91,6 +92,41 @@ class WorkflowRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class ModelRoutingStats(Base):
+    """Read-mapping of the API-owned model_routing_stats table (UCB selection)."""
+
+    __tablename__ = "model_routing_stats"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    workflow_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    workflow_version_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
+    node_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    route_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    pulls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_reward: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    average_reward: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    average_latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    average_cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    total_quality_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    average_quality_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -162,6 +162,7 @@ def execute_run(
             max_runtime_seconds=max_runtime,
             max_cost_usd=max_cost,
             emitter=emitter,
+            db=db,
         )
         output = execute_graph(graph, context, emitter)
 
