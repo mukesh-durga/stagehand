@@ -154,6 +154,11 @@ Endpoints:
 | GET | `/templates` | List public workflow templates |
 | GET | `/templates/{slug}` | Get one template |
 | POST | `/templates/{slug}/clone` | Clone a template into a new editable workflow |
+| GET | `/usage/events` | Recent usage events (optional `run_id`/`workflow_id`/`event_type`) |
+| GET | `/usage/summary` | Aggregate usage (runs, calls, tokens, cost breakdowns) |
+| POST | `/usage/backfill` | Idempotently record usage for completed runs |
+| GET | `/billing/status` | Billing mode (`mock` / `stripe_test`) |
+| POST | `/billing/create-checkout-session` | Test/mock checkout (never a real charge) |
 | GET | `/runs/{run_id}/trace` | Trace events for a run (from ClickHouse), ordered by time |
 | WS | `/ws/runs/{run_id}` | Live trace stream (replays + streams `run:{run_id}:events`) |
 
@@ -171,8 +176,11 @@ npm run build                 # production build to dist/
 ```
 
 Routes: `/` → `/dashboard`, `/workflows`, `/workflows/new`, `/workflows/:id/builder`,
-`/runs`, `/runs/:runId`, `/templates`, `/routing`, `/settings`. The dashboard calls
-`/health` and `/health/db` and shows API/DB status. `/templates` is the gallery —
+`/runs`, `/runs/:runId`, `/templates`, `/routing`, `/usage`, `/settings`. The dashboard
+calls `/health` and `/health/db` and shows API/DB status. `/usage` is a SaaS-style
+usage dashboard (runs, model/tool calls, tokens, cost, cost-by-model, events) with a
+**Backfill usage** button and a billing card. Billing is **test mode only** — `mock`
+when no Stripe key, `stripe_test` with a `sk_test_...` key; no real charges ever. `/templates` is the gallery —
 clone a seeded template (Basic Agent, Tool Calculator, Agent With Retry, Adaptive
 Agent) into a new editable workflow that opens in the builder. `/runs/:runId` is the run detail page (status, metrics,
 input/output, full trace timeline, and a click-through event detail panel); reach it
@@ -267,4 +275,5 @@ This project is built milestone-by-milestone (see `CLAUDE.md`).
 - [x] **Milestone 14** — Eval harness (`eval_results`, 6 evaluators, eval endpoints, Run Detail eval section)
 - [x] **Milestone 15** — UCB model router (`model_routing_stats`, UCB selection, `routing_decision` traces, `/routing` dashboard)
 - [x] **Milestone 16** — Template gallery (`templates` table, startup seed, gallery page, clone-to-workflow)
-- [ ] **Milestone 17** — Stripe test mode (usage dashboard)
+- [x] **Milestone 17** — Usage tracking + mock/Stripe-test billing (`usage_events`, `/usage` dashboard)
+- [ ] **Milestone 18** — Deployment

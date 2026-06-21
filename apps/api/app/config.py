@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     default_max_steps: int = 25
     default_max_runtime_seconds: int = 120
 
+    # Billing (test mode only — never real charges)
+    billing_mode: str = "mock"  # "mock" | "stripe_test"
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_id: str = ""
+
     @property
     def database_url(self) -> str:
         """SQLAlchemy connection URL for PostgreSQL (sync, psycopg2)."""

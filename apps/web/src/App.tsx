@@ -5,6 +5,7 @@ import { BuilderPage } from "@/features/builder/BuilderPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { RoutingPage } from "@/features/routing/RoutingPage";
 import { TemplatesPage } from "@/features/templates/TemplatesPage";
+import { UsagePage } from "@/features/usage/UsagePage";
 import { RunDetailPage } from "@/features/runs/RunDetailPage";
 import { RunDiffPage } from "@/features/runs/RunDiffPage";
 import { RunsListPage } from "@/features/runs/RunsListPage";
@@ -25,6 +26,7 @@ export function App() {
         <Route path="/runs/:runId/diff/:otherRunId" element={<RunDiffPage />} />
         <Route path="/routing" element={<RoutingPage />} />
         <Route path="/templates" element={<TemplatesPage />} />
+        <Route path="/usage" element={<UsagePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>

@@ -225,6 +225,52 @@ export interface EvalResult {
   created_at: string;
 }
 
+// --- usage & billing (Milestone 17) ---
+
+export interface UsageEvent {
+  id: string;
+  run_id: string | null;
+  workflow_id: string | null;
+  workflow_version_id: string | null;
+  event_type: string;
+  model_name: string | null;
+  tool_name: string | null;
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  estimated_cost_usd: number;
+  quantity: number;
+  metadata_json: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface UsageSummary {
+  total_runs: number;
+  total_model_calls: number;
+  total_tool_calls: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_tokens: number;
+  total_estimated_cost_usd: number;
+  cost_by_model: Record<string, number>;
+  cost_by_workflow: Record<string, number>;
+  usage_by_day: Record<string, number>;
+}
+
+export interface BillingStatus {
+  mode: string;
+  stripe_configured: boolean;
+  customer_id: string | null;
+  checkout_url: string | null;
+  status: string;
+}
+
+export interface CheckoutSession {
+  mode: string;
+  checkout_url: string;
+  session_id: string | null;
+}
+
 // --- templates (Milestone 16) ---
 
 export interface Template {

@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health, routing, runs, templates, workflows, ws
+from app.api.routes import health, routing, runs, templates, usage, workflows, ws
 from app.config import get_settings
 from app.db.postgres import SessionLocal
 from app.services.template_service import seed_templates
@@ -52,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(runs.router)
     app.include_router(routing.router)
     app.include_router(templates.router)
+    app.include_router(usage.router)
     app.include_router(ws.router)
 
     return app

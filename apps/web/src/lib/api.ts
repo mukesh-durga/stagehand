@@ -1,4 +1,6 @@
 import type {
+  BillingStatus,
+  CheckoutSession,
   CloneTemplateRequest,
   DbHealthResponse,
   EvalRequest,
@@ -8,6 +10,8 @@ import type {
   RunDiffResponse,
   Template,
   TraceEvent,
+  UsageEvent,
+  UsageSummary,
   Workflow,
   WorkflowCreatePayload,
   WorkflowRun,
@@ -184,5 +188,29 @@ export function cloneTemplate(
   return request<Workflow>(`/templates/${slug}/clone`, {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+// --- usage & billing ---
+
+export function getUsageEvents(): Promise<UsageEvent[]> {
+  return request<UsageEvent[]>("/usage/events");
+}
+
+export function getUsageSummary(): Promise<UsageSummary> {
+  return request<UsageSummary>("/usage/summary");
+}
+
+export function backfillUsage(): Promise<{ inserted: number }> {
+  return request<{ inserted: number }>("/usage/backfill", { method: "POST" });
+}
+
+export function getBillingStatus(): Promise<BillingStatus> {
+  return request<BillingStatus>("/billing/status");
+}
+
+export function createCheckoutSession(): Promise<CheckoutSession> {
+  return request<CheckoutSession>("/billing/create-checkout-session", {
+    method: "POST",
   });
 }

@@ -1,5 +1,6 @@
 import {
   Activity,
+  CreditCard,
   LayoutDashboard,
   LayoutTemplate,
   Settings,
@@ -16,6 +17,7 @@ const navItems = [
   { to: "/templates", label: "Templates", icon: LayoutTemplate },
   { to: "/runs", label: "Runs", icon: Activity },
   { to: "/routing", label: "Routing", icon: Split },
+  { to: "/usage", label: "Usage", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -25,6 +25,7 @@ from worker.engine.trace_emitter import TraceEmitter
 from worker.engine.workflow_loader import load_workflow_version
 from worker.engine.workflow_validator import validate_graph
 from worker.models import WorkflowRun
+from worker.usage import record_run_usage
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,9 @@ def execute_run(
         latency_ms = _mark_failed(db, run, f"Unexpected error: {exc}", start)
         emitter.emit_run_failed(f"Unexpected error: {exc}", latency_ms)
         logger.exception("run %s failed unexpectedly", run.id)
+
+    # Record usage from the in-memory trace events (idempotent, best-effort).
+    record_run_usage(db, run, emitter.events)
 
     return run
 
