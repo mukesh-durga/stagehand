@@ -35,12 +35,14 @@ stagehand/
 ├── README.md
 ├── .env.example
 ├── .gitignore
-├── docker-compose.yml     # postgres, redis, clickhouse
+├── docker-compose.yml     # postgres, redis, clickhouse (local dev)
+├── render.yaml            # Render Blueprint (API + worker)
 ├── Makefile               # convenience commands
+├── scripts/               # deploy_api.sh, start_worker.sh
 ├── apps/
-│   ├── web/               # frontend (placeholder until Milestone 3)
-│   ├── api/               # FastAPI backend (placeholder until Milestone 1)
-│   └── worker/            # worker engine (placeholder until Milestone 6)
+│   ├── web/               # frontend (Vite/React) + vercel.json
+│   ├── api/               # FastAPI backend + Dockerfile
+│   └── worker/            # worker engine + Dockerfile
 ├── infra/
 │   ├── clickhouse/        # schema.sql (trace_events)
 │   ├── postgres/          # init.sql (extensions bootstrap)
@@ -132,8 +134,10 @@ Endpoints:
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | Liveness — always ok if the process is up |
+| GET | `/health` | Liveness — always ok if the process is up (use as cloud health check) |
 | GET | `/health/db` | Readiness — checks PostgreSQL connectivity |
+| GET | `/health/redis` | Readiness — checks Redis connectivity |
+| GET | `/health/clickhouse` | Readiness — checks ClickHouse connectivity |
 | POST | `/workflows` | Create workflow + version 1 |
 | GET | `/workflows` | List workflows (with current version) |
 | GET | `/workflows/{id}` | Get workflow with current graph |
@@ -254,6 +258,33 @@ outage logs a warning but never fails the run.
 | Redis | 6379 | |
 | ClickHouse | 8123 (HTTP), 9000 (native) | |
 
+## Production deployment
+
+Stagehand is **local-first** but deployment-ready. The reference topology:
+
+| Component | Host |
+|---|---|
+| Frontend | Vercel (`apps/web`, Vite static build) |
+| API | Render (`apps/api/Dockerfile`, web service) |
+| Worker | Render (`apps/worker/Dockerfile`, background worker) |
+| PostgreSQL | Neon / Supabase (`DATABASE_URL`) |
+| Redis | Upstash (`REDIS_URL`) |
+| ClickHouse | ClickHouse Cloud (`CLICKHOUSE_*`, `CLICKHOUSE_SECURE=true`) |
+
+- One-click infra via the [`render.yaml`](./render.yaml) Blueprint (API + worker).
+  Railway and Fly.io use the same Dockerfiles.
+- Frontend deploy config in [`apps/web/vercel.json`](./apps/web/vercel.json).
+- Manual deploy helpers: [`scripts/deploy_api.sh`](./scripts/deploy_api.sh)
+  (installs deps → `alembic upgrade head` → uvicorn) and
+  [`scripts/start_worker.sh`](./scripts/start_worker.sh).
+- Cloud health check path is `/health`; DB/Redis/ClickHouse readiness at
+  `/health/db`, `/health/redis`, `/health/clickhouse`.
+
+**Full step-by-step guide, env-var tables, smoke test, and troubleshooting:
+[`docs/deployment.md`](./docs/deployment.md).** No secrets are committed — every
+cloud secret is set in the provider dashboard (`.env` is git-ignored;
+`.env.example` holds placeholders only).
+
 ## Build status
 
 This project is built milestone-by-milestone (see `CLAUDE.md`).
@@ -276,4 +307,4 @@ This project is built milestone-by-milestone (see `CLAUDE.md`).
 - [x] **Milestone 15** — UCB model router (`model_routing_stats`, UCB selection, `routing_decision` traces, `/routing` dashboard)
 - [x] **Milestone 16** — Template gallery (`templates` table, startup seed, gallery page, clone-to-workflow)
 - [x] **Milestone 17** — Usage tracking + mock/Stripe-test billing (`usage_events`, `/usage` dashboard)
-- [ ] **Milestone 18** — Deployment
+- [x] **Milestone 18** — Deployment readiness (Dockerfiles, `render.yaml`, `vercel.json`, prod env/CORS/WS config, deploy docs)

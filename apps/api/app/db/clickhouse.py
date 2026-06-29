@@ -68,6 +68,7 @@ def _client() -> Client:
         username=s.clickhouse_user,
         password=s.clickhouse_password,
         database=s.clickhouse_database,
+        secure=s.clickhouse_secure,
     )
 
 

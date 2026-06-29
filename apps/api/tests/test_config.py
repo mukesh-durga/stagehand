@@ -18,7 +18,37 @@ def test_database_url_is_well_formed() -> None:
         postgres_port=5432,
         postgres_db="d",
     )
-    assert settings.database_url == "postgresql+psycopg2://u:p@h:5432/d"
+    assert settings.effective_database_url == "postgresql+psycopg2://u:p@h:5432/d"
+
+
+def test_database_url_override_is_normalized() -> None:
+    # Managed providers emit postgres:// or postgresql://; both map to psycopg2.
+    assert (
+        Settings(database_url="postgres://u:p@host:5432/db").effective_database_url
+        == "postgresql+psycopg2://u:p@host:5432/db"
+    )
+    assert (
+        Settings(database_url="postgresql://u:p@host:5432/db").effective_database_url
+        == "postgresql+psycopg2://u:p@host:5432/db"
+    )
+    # An already-qualified URL is passed through unchanged.
+    qualified = "postgresql+psycopg2://u:p@host:5432/db"
+    assert Settings(database_url=qualified).effective_database_url == qualified
+
+
+def test_cors_origins_includes_localhost_and_extras() -> None:
+    settings = Settings(
+        frontend_url="https://app.example.com",
+        backend_cors_origins="https://a.example.com, https://b.example.com",
+    )
+    origins = settings.cors_origins
+    assert "http://localhost:5173" in origins
+    assert "http://localhost:5174" in origins
+    assert "https://app.example.com" in origins
+    assert "https://a.example.com" in origins
+    assert "https://b.example.com" in origins
+    # No duplicates.
+    assert len(origins) == len(set(origins))
 
 
 def test_get_settings_is_cached() -> None:

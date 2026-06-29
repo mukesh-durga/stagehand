@@ -1,9 +1,21 @@
 import { API_BASE_URL } from "@/lib/api";
 import type { TraceEvent } from "@/types";
 
-/** Build the ws(s):// URL for a run's trace stream from the HTTP API base. */
+/**
+ * Base ws(s):// URL for trace streams.
+ *
+ * Prefers VITE_WS_BASE_URL (set this in production when the WS origin differs
+ * from the HTTP API, e.g. behind a proxy). Otherwise it is derived from
+ * VITE_API_BASE_URL by swapping the http(s) scheme for ws(s) — so https:// API
+ * URLs correctly yield wss:// in production while local http stays ws.
+ */
+export const WS_BASE_URL =
+  (import.meta.env.VITE_WS_BASE_URL as string | undefined) ??
+  API_BASE_URL.replace(/^http/, "ws");
+
+/** Build the ws(s):// URL for a run's trace stream. */
 export function runTraceSocketUrl(runId: string): string {
-  const base = API_BASE_URL.replace(/^http/, "ws");
+  const base = WS_BASE_URL.replace(/\/+$/, "");
   return `${base}/ws/runs/${runId}`;
 }
 

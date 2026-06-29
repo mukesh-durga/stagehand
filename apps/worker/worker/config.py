@@ -9,6 +9,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
 
 
+def _normalize_database_url(url: str) -> str:
+    """Normalize a managed-provider Postgres URL to the psycopg2 driver scheme."""
+    if not url:
+        return ""
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg2://" + url[len("postgres://") :]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg2://" + url[len("postgresql://") :]
+    return url
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(str(_ROOT_ENV), ".env"),
@@ -18,6 +29,8 @@ class Settings(BaseSettings):
     )
 
     # PostgreSQL (same database as the API)
+    # In production set DATABASE_URL; locally it is built from the components below.
+    database_url: str = ""
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "stagehand"
@@ -33,6 +46,8 @@ class Settings(BaseSettings):
     clickhouse_user: str = "default"
     clickhouse_password: str = ""
     clickhouse_database: str = "stagehand"
+    # ClickHouse Cloud requires TLS (port 8443, secure=True). Local Docker uses 8123.
+    clickhouse_secure: bool = False
 
     # Run limits / defaults
     default_max_cost_usd: float = 0.50
@@ -49,9 +64,13 @@ class Settings(BaseSettings):
     # UCB adaptive routing
     ucb_exploration_weight: float = 1.0
 
+    # Billing mode (the worker only reads this; the API owns billing endpoints).
+    billing_mode: str = "mock"
+
     @property
-    def database_url(self) -> str:
-        return (
+    def effective_database_url(self) -> str:
+        """Prefer DATABASE_URL (production); fall back to POSTGRES_* (local)."""
+        return _normalize_database_url(self.database_url) or (
             f"postgresql+psycopg2://{self.postgres_user}:{self.postgres_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
