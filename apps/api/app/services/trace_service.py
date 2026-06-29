@@ -1,14 +1,13 @@
-"""Trace retrieval: verify the run exists, then read events from ClickHouse."""
+"""Trace retrieval: verify the run exists, then read events from the TraceStore."""
 
 import json
 import uuid
 from typing import Any
 
-from clickhouse_connect.driver.client import Client
 from sqlalchemy.orm import Session
 
-from app.db.clickhouse import ensure_trace_table, query_run_trace_events
 from app.db.repositories.run_repository import RunRepository
+from app.db.trace_store import TraceStore
 from app.schemas.trace import TraceEventResponse
 from app.services.exceptions import RunNotFoundError
 
@@ -46,13 +45,13 @@ def _row_to_response(row: tuple[Any, ...]) -> TraceEventResponse:
 
 
 def get_run_trace(
-    db: Session, clickhouse_client: Client, run_id: uuid.UUID
+    db: Session, store: TraceStore, run_id: uuid.UUID
 ) -> list[TraceEventResponse]:
     run = RunRepository(db).get(run_id)
     if run is None:
         raise RunNotFoundError(str(run_id))
 
     # Idempotent — ensures reads don't 500 before any trace has been written.
-    ensure_trace_table(clickhouse_client)
-    rows = query_run_trace_events(clickhouse_client, str(run_id))
+    store.ensure_ready()
+    rows = store.get_events_by_run_id(run_id)
     return [_row_to_response(r) for r in rows]

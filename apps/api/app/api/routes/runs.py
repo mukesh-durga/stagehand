@@ -3,13 +3,13 @@
 import uuid
 
 import redis
-from clickhouse_connect.driver.client import Client
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.db.clickhouse import get_clickhouse
+from app.api.deps import get_trace_store
 from app.db.postgres import get_db
 from app.db.redis import get_redis
+from app.db.trace_store import TraceStore
 from app.schemas.diff import RunDiffResponse
 from app.schemas.eval import EvalRequest, EvalResultResponse
 from app.schemas.run import WorkflowRunCreate, WorkflowRunResponse
@@ -34,11 +34,14 @@ router = APIRouter(tags=["runs"])
 def create_run(
     workflow_id: uuid.UUID,
     payload: WorkflowRunCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     redis_client: redis.Redis = Depends(get_redis),
 ) -> WorkflowRunResponse:
     try:
-        return run_service.create_run(db, redis_client, workflow_id, payload)
+        return run_service.create_run(
+            db, redis_client, workflow_id, payload, background_tasks=background_tasks
+        )
     except WorkflowNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
     except WorkflowNotReadyError:
@@ -71,11 +74,14 @@ def get_run(run_id: uuid.UUID, db: Session = Depends(get_db)) -> WorkflowRunResp
 )
 def replay_run(
     run_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     redis_client: redis.Redis = Depends(get_redis),
 ) -> WorkflowRunResponse:
     try:
-        return run_service.replay_run(db, redis_client, run_id)
+        return run_service.replay_run(
+            db, redis_client, run_id, background_tasks=background_tasks
+        )
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
 
@@ -94,10 +100,10 @@ def diff_runs(
     run_id: uuid.UUID,
     other_run_id: uuid.UUID,
     db: Session = Depends(get_db),
-    clickhouse_client: Client = Depends(get_clickhouse),
+    store: TraceStore = Depends(get_trace_store),
 ) -> RunDiffResponse:
     try:
-        return diff_service.diff_runs(db, clickhouse_client, run_id, other_run_id)
+        return diff_service.diff_runs(db, store, run_id, other_run_id)
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
 
@@ -111,10 +117,10 @@ def run_eval(
     run_id: uuid.UUID,
     payload: EvalRequest | None = None,
     db: Session = Depends(get_db),
-    clickhouse_client: Client = Depends(get_clickhouse),
+    store: TraceStore = Depends(get_trace_store),
 ) -> list[EvalResultResponse]:
     try:
-        return eval_service.run_eval(db, clickhouse_client, run_id, payload or EvalRequest())
+        return eval_service.run_eval(db, store, run_id, payload or EvalRequest())
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")
     except RunNotEvaluatableError:
@@ -139,9 +145,9 @@ def list_evals(
 def get_run_trace(
     run_id: uuid.UUID,
     db: Session = Depends(get_db),
-    clickhouse_client: Client = Depends(get_clickhouse),
+    store: TraceStore = Depends(get_trace_store),
 ) -> list[TraceEventResponse]:
     try:
-        return trace_service.get_run_trace(db, clickhouse_client, run_id)
+        return trace_service.get_run_trace(db, store, run_id)
     except RunNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Run not found")

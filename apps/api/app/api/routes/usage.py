@@ -2,12 +2,12 @@
 
 import uuid
 
-from clickhouse_connect.driver.client import Client
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.db.clickhouse import get_clickhouse
+from app.api.deps import get_trace_store
 from app.db.postgres import get_db
+from app.db.trace_store import TraceStore
 from app.schemas.usage import (
     BillingStatusResponse,
     CheckoutSessionResponse,
@@ -40,9 +40,9 @@ def get_usage_summary(db: Session = Depends(get_db)) -> UsageSummaryResponse:
 @router.post("/usage/backfill")
 def backfill_usage(
     db: Session = Depends(get_db),
-    clickhouse_client: Client = Depends(get_clickhouse),
+    store: TraceStore = Depends(get_trace_store),
 ) -> dict[str, int]:
-    inserted = usage_service.backfill(db, clickhouse_client)
+    inserted = usage_service.backfill(db, store)
     return {"inserted": inserted}
 
 

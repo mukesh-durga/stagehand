@@ -225,6 +225,68 @@ The Dockerfiles and env vars are platform-agnostic.
 
 ---
 
+## H. Free Hosted Demo Mode (no-cost LinkedIn demo)
+
+For a public demo on free tiers — no paid ClickHouse, no always-on worker — run the
+API in **hosted demo mode**. The full ClickHouse + worker architecture still works
+locally via Docker Compose; this mode only changes how the *deployed* app behaves.
+
+What changes in `DEPLOYMENT_MODE=hosted_demo`:
+
+| Concern | Local / full stack | Hosted demo |
+|---|---|---|
+| Frontend | Vite dev / Vercel | **Vercel free** |
+| API | uvicorn / Render | **Render free web service** |
+| Database | Docker Postgres | **Neon free Postgres** |
+| Redis | Docker Redis | **Upstash free Redis** (live WS streaming) |
+| ClickHouse | Docker / Cloud | **disabled** (`/health/clickhouse` → `disabled`) |
+| Worker | separate process | **disabled** — API runs short mock runs in a background task |
+| Traces | ClickHouse | **PostgreSQL** (`trace_events_pg` table) |
+| AI | mock or real | **mock only** (deterministic, zero cost) |
+| Billing | mock / stripe_test | **mock** |
+
+How execution works without a worker: `POST /workflows/{id}/run` creates the run row
+and schedules a **FastAPI background task** that runs a lightweight, mock-only
+topological pass over the graph, emits the same trace events, stores them in
+Postgres, and publishes them to Redis for the live WebSocket. Runs are short and
+bounded by the same max-steps / max-runtime limits.
+
+Graceful degradation:
+- If Redis is briefly unavailable, the run still completes and the run-detail page
+  shows the stored Postgres traces after completion (only live streaming is affected).
+- ClickHouse being disabled never fails a deploy health check (`/health` is the
+  health-check path; `/health/clickhouse` returns `disabled`).
+
+> **First request may be slow.** Render free web services sleep after inactivity and
+> cold-start on the next request (~30–60s). This is expected on the free tier.
+
+### Render env vars for the free demo (API)
+
+```env
+APP_ENV=production
+DEPLOYMENT_MODE=hosted_demo
+CLICKHOUSE_ENABLED=false
+WORKER_ENABLED=false
+HOSTED_DEMO_EXECUTION=true
+TRACE_STORAGE=postgres
+BILLING_MODE=mock
+AI_PROVIDER=mock
+CHEAP_MODEL_NAME=mock-cheap
+STRONG_MODEL_NAME=mock-strong
+DEFAULT_EVAL_MODEL_NAME=mock-cheap
+DATABASE_URL=<Neon URL>
+REDIS_URL=<Upstash URL>
+FRONTEND_URL=<Vercel URL>
+BACKEND_CORS_ORIGINS=<Vercel URL>
+```
+
+Setting `DEPLOYMENT_MODE=hosted_demo` alone applies the `CLICKHOUSE_ENABLED`/
+`WORKER_ENABLED`/`HOSTED_DEMO_EXECUTION`/`TRACE_STORAGE` defaults above — they are
+listed explicitly for clarity. No worker service is needed; deploy only the API web
+service (with `alembic upgrade head` as the pre-deploy command) and the frontend.
+
+---
+
 ## Local development (unchanged)
 
 ```bash

@@ -3,7 +3,25 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Per-deployment-mode defaults for the optional mode flags. An explicitly-set env
+# var always wins; only unset (None) flags fall back to these.
+_MODE_DEFAULTS = {
+    "local": {
+        "clickhouse_enabled": True,
+        "worker_enabled": True,
+        "hosted_demo_execution": False,
+        "trace_storage": "clickhouse",
+    },
+    "hosted_demo": {
+        "clickhouse_enabled": False,
+        "worker_enabled": False,
+        "hosted_demo_execution": True,
+        "trace_storage": "postgres",
+    },
+}
 
 # Root .env lives at the repo root: apps/api/app/config.py -> parents[3] == repo root.
 _ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
@@ -45,6 +63,18 @@ class Settings(BaseSettings):
     # Comma-separated list of additional allowed CORS origins (e.g. the Vercel URL).
     backend_cors_origins: str = ""
 
+    # Deployment mode — "local" (full stack) or "hosted_demo" (free-tier, no
+    # ClickHouse / no separate worker). The flags below default from this mode
+    # when left unset, but any explicitly-set env var always wins.
+    deployment_mode: str = "local"  # "local" | "hosted_demo"
+    # Sentinels (None) so an explicit env value overrides the mode-based default.
+    clickhouse_enabled: bool | None = None
+    worker_enabled: bool | None = None
+    hosted_demo_execution: bool | None = None
+    trace_storage: str | None = None  # "clickhouse" | "postgres"
+    # AI provider selection. "mock" forces the deterministic provider (hosted demo).
+    ai_provider: str = "mock"
+
     # PostgreSQL
     # In production set DATABASE_URL (Neon/Supabase/Render). When empty the URL is
     # built from the POSTGRES_* components below (used for local Docker Compose).
@@ -84,6 +114,29 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""
+
+    @model_validator(mode="after")
+    def _apply_mode_defaults(self) -> "Settings":
+        """Fill unset deployment flags from DEPLOYMENT_MODE defaults.
+
+        Explicit env vars take precedence; only None flags are filled. Unknown
+        modes fall back to ``local`` defaults so the app never starts misconfigured.
+        """
+        defaults = _MODE_DEFAULTS.get(self.deployment_mode, _MODE_DEFAULTS["local"])
+        if self.clickhouse_enabled is None:
+            self.clickhouse_enabled = defaults["clickhouse_enabled"]
+        if self.worker_enabled is None:
+            self.worker_enabled = defaults["worker_enabled"]
+        if self.hosted_demo_execution is None:
+            self.hosted_demo_execution = defaults["hosted_demo_execution"]
+        if self.trace_storage is None:
+            self.trace_storage = defaults["trace_storage"]
+        return self
+
+    @property
+    def use_postgres_traces(self) -> bool:
+        """True when traces should be read/written via Postgres rather than ClickHouse."""
+        return self.trace_storage == "postgres" or not self.clickhouse_enabled
 
     @property
     def effective_database_url(self) -> str:

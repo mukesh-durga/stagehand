@@ -5,11 +5,11 @@ import uuid
 from collections import Counter
 from typing import Any
 
-from clickhouse_connect.driver.client import Client
 from sqlalchemy.orm import Session
 
-from app.db.clickhouse import TRACE_COLUMNS, ensure_trace_table, query_run_trace_events
+from app.db.clickhouse import TRACE_COLUMNS
 from app.db.repositories.run_repository import RunRepository
+from app.db.trace_store import TraceStore
 from app.schemas.diff import (
     EventDiff,
     NodeDiff,
@@ -162,7 +162,7 @@ def _summarize_json(data: Any, limit: int = 400) -> str:
 
 def diff_runs(
     db: Session,
-    clickhouse_client: Client,
+    store: TraceStore,
     run_id: uuid.UUID,
     other_run_id: uuid.UUID,
 ) -> RunDiffResponse:
@@ -174,9 +174,9 @@ def diff_runs(
     if run_b is None:
         raise RunNotFoundError(str(other_run_id))
 
-    ensure_trace_table(clickhouse_client)
-    events_a = _rows_to_dicts(query_run_trace_events(clickhouse_client, str(run_id)))
-    events_b = _rows_to_dicts(query_run_trace_events(clickhouse_client, str(other_run_id)))
+    store.ensure_ready()
+    events_a = _rows_to_dicts(store.get_events_by_run_id(run_id))
+    events_b = _rows_to_dicts(store.get_events_by_run_id(other_run_id))
 
     agg_a = _aggregate(events_a)
     agg_b = _aggregate(events_b)

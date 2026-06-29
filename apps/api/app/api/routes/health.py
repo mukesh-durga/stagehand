@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 from sqlalchemy import text
 
+from app.config import get_settings
 from app.db.clickhouse import get_clickhouse
 from app.db.postgres import engine
 from app.db.redis import get_redis
@@ -43,7 +44,16 @@ def health_redis() -> dict[str, str]:
 
 @router.get("/health/clickhouse")
 def health_clickhouse() -> dict[str, str]:
-    """Readiness check for ClickHouse connectivity (trace analytics store)."""
+    """Readiness check for ClickHouse connectivity (trace analytics store).
+
+    In hosted demo mode ClickHouse is disabled and traces are stored in Postgres;
+    this returns ``disabled`` (not an error) so it never fails a deploy health check.
+    """
+    if not get_settings().clickhouse_enabled:
+        return {
+            "status": "disabled",
+            "message": "ClickHouse disabled in hosted demo mode",
+        }
     try:
         get_clickhouse().command("SELECT 1")
         return {"status": "ok", "clickhouse": "connected"}

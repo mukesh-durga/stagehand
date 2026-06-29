@@ -28,6 +28,12 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # Deployment mode — when DEPLOYMENT_MODE=hosted_demo, ClickHouse is disabled
+    # and the worker is not expected to run (the API executes short demo runs).
+    deployment_mode: str = "local"  # "local" | "hosted_demo"
+    clickhouse_enabled: bool = True
+    trace_storage: str = "clickhouse"  # "clickhouse" | "postgres"
+
     # PostgreSQL (same database as the API)
     # In production set DATABASE_URL; locally it is built from the components below.
     database_url: str = ""

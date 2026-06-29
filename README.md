@@ -285,6 +285,18 @@ Stagehand is **local-first** but deployment-ready. The reference topology:
 cloud secret is set in the provider dashboard (`.env` is git-ignored;
 `.env.example` holds placeholders only).
 
+### Free Hosted Demo Mode (no-cost)
+
+Set `DEPLOYMENT_MODE=hosted_demo` to run a public demo entirely on free tiers —
+**no paid ClickHouse and no always-on worker.** In this mode ClickHouse is disabled
+(traces are stored in PostgreSQL via `trace_events_pg`), the separate worker is not
+needed (the API executes short, mock-only runs in a background task), and AI/billing
+are mock. `/health/clickhouse` returns `disabled` (never failing a deploy health
+check). Local full-stack mode (Docker Compose + worker + ClickHouse) is unchanged.
+The flags `CLICKHOUSE_ENABLED` / `WORKER_ENABLED` / `HOSTED_DEMO_EXECUTION` /
+`TRACE_STORAGE` default from `DEPLOYMENT_MODE` and can be overridden individually.
+See [Free Hosted Demo Mode](./docs/deployment.md#h-free-hosted-demo-mode-no-cost-linkedin-demo).
+
 ## Build status
 
 This project is built milestone-by-milestone (see `CLAUDE.md`).
@@ -308,3 +320,4 @@ This project is built milestone-by-milestone (see `CLAUDE.md`).
 - [x] **Milestone 16** — Template gallery (`templates` table, startup seed, gallery page, clone-to-workflow)
 - [x] **Milestone 17** — Usage tracking + mock/Stripe-test billing (`usage_events`, `/usage` dashboard)
 - [x] **Milestone 18** — Deployment readiness (Dockerfiles, `render.yaml`, `vercel.json`, prod env/CORS/WS config, deploy docs)
+- [x] **Milestone 18.5** — Free hosted demo mode (deployment-mode flags, Postgres trace fallback + TraceStore abstraction, in-API mock executor, ClickHouse-optional health)

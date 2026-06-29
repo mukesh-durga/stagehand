@@ -3,13 +3,12 @@
 import uuid
 from typing import Any
 
-from clickhouse_connect.driver.client import Client
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.clickhouse import ensure_trace_table, query_run_trace_events
 from app.db.models.run import WorkflowRun
 from app.db.models.usage import UsageEvent
+from app.db.trace_store import TraceStore
 from app.schemas.usage import UsageEventResponse, UsageSummaryResponse
 from app.services.diff_service import _rows_to_dicts
 
@@ -90,9 +89,9 @@ def record_run_usage(
     return len(events)
 
 
-def backfill(db: Session, clickhouse_client: Client) -> int:
+def backfill(db: Session, store: TraceStore) -> int:
     """Record usage for completed/failed runs that have none yet."""
-    ensure_trace_table(clickhouse_client)
+    store.ensure_ready()
     runs = db.scalars(
         select(WorkflowRun).where(WorkflowRun.status.in_(("completed", "failed")))
     ).all()
@@ -103,7 +102,7 @@ def backfill(db: Session, clickhouse_client: Client) -> int:
         )
         if existing:
             continue
-        trace_events = _rows_to_dicts(query_run_trace_events(clickhouse_client, str(run.id)))
+        trace_events = _rows_to_dicts(store.get_events_by_run_id(run.id))
         total += record_run_usage(db, run, trace_events)
     return total
 

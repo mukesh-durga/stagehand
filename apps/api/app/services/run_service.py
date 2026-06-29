@@ -5,9 +5,11 @@ This milestone only creates a run record and enqueues a job. The worker
 """
 
 import json
+import logging
 import uuid
 
 import redis
+from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -21,6 +23,8 @@ from app.services.exceptions import (
     WorkflowNotFoundError,
     WorkflowNotReadyError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _to_response(run: WorkflowRun) -> WorkflowRunResponse:
@@ -62,11 +66,48 @@ def _resolve_run_config(run_config: RunConfig | None) -> dict[str, float | int]:
     }
 
 
+def _dispatch_run(
+    redis_client: redis.Redis,
+    run: WorkflowRun,
+    run_config: dict[str, float | int],
+    background_tasks: BackgroundTasks | None,
+) -> None:
+    """Either enqueue the run for the worker, or execute it in-process (hosted demo).
+
+    - WORKER_ENABLED=true (local/full stack): push a job to Redis for the worker.
+    - WORKER_ENABLED=false + HOSTED_DEMO_EXECUTION=true: run a short mock execution
+      in a FastAPI background task (no separate worker needed).
+    """
+    settings = get_settings()
+
+    if not settings.worker_enabled and settings.hosted_demo_execution:
+        # Import lazily to avoid a heavy import at module load.
+        from app.services.demo_executor import execute_demo_run
+
+        if background_tasks is not None:
+            background_tasks.add_task(execute_demo_run, run.id)
+        else:
+            # No background-task context (e.g. called directly): run inline.
+            execute_demo_run(run.id)
+        return
+
+    job = {
+        "run_id": str(run.id),
+        "workflow_id": str(run.workflow_id),
+        "workflow_version_id": str(run.workflow_version_id),
+        "input": run.input_json or {},
+        "run_config": run_config,
+        "created_at": run.created_at.isoformat(),
+    }
+    redis_client.rpush(RUN_QUEUE_KEY, json.dumps(job))
+
+
 def create_run(
     db: Session,
     redis_client: redis.Redis,
     workflow_id: uuid.UUID,
     data: WorkflowRunCreate,
+    background_tasks: BackgroundTasks | None = None,
 ) -> WorkflowRunResponse:
     workflow = WorkflowRepository(db).get(workflow_id)
     if workflow is None:
@@ -85,15 +126,7 @@ def create_run(
     db.refresh(run)
 
     run_config = _resolve_run_config(data.run_config)
-    job = {
-        "run_id": str(run.id),
-        "workflow_id": str(run.workflow_id),
-        "workflow_version_id": str(run.workflow_version_id),
-        "input": run.input_json or {},
-        "run_config": run_config,
-        "created_at": run.created_at.isoformat(),
-    }
-    redis_client.rpush(RUN_QUEUE_KEY, json.dumps(job))
+    _dispatch_run(redis_client, run, run_config, background_tasks)
 
     return _to_response(run)
 
@@ -106,7 +139,10 @@ def get_run(db: Session, run_id: uuid.UUID) -> WorkflowRunResponse:
 
 
 def replay_run(
-    db: Session, redis_client: redis.Redis, run_id: uuid.UUID
+    db: Session,
+    redis_client: redis.Redis,
+    run_id: uuid.UUID,
+    background_tasks: BackgroundTasks | None = None,
 ) -> WorkflowRunResponse:
     """Create a new queued run reusing the original's version and input."""
     repo = RunRepository(db)
@@ -127,15 +163,7 @@ def replay_run(
     db.refresh(replay)
 
     run_config = _resolve_run_config(None)
-    job = {
-        "run_id": str(replay.id),
-        "workflow_id": str(replay.workflow_id),
-        "workflow_version_id": str(replay.workflow_version_id),
-        "input": replay.input_json or {},
-        "run_config": run_config,
-        "created_at": replay.created_at.isoformat(),
-    }
-    redis_client.rpush(RUN_QUEUE_KEY, json.dumps(job))
+    _dispatch_run(redis_client, replay, run_config, background_tasks)
 
     return _to_response(replay)
 

@@ -2,39 +2,44 @@
 
 import uuid
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.db.clickhouse import TRACE_COLUMNS, get_clickhouse
+from app.api.deps import get_trace_store
+from app.db.clickhouse import TRACE_COLUMNS
 from app.db.models.run import WorkflowRun
 from app.db.models.workflow import Workflow, WorkflowVersion
 from app.main import app
 
 
-class FakeClickHouse:
+class FakeTraceStore:
     def __init__(self, by_run: dict[str, list[tuple[Any, ...]]] | None = None):
         self.by_run = by_run or {}
 
-    def command(self, sql: str) -> None:
+    def ensure_ready(self) -> None:
         pass
 
-    def query(self, sql: str, parameters: dict | None = None):
-        run_id = (parameters or {}).get("run_id", "")
-        return SimpleNamespace(result_rows=self.by_run.get(run_id, []))
+    def get_events_by_run_id(self, run_id: Any) -> list[tuple[Any, ...]]:
+        return self.by_run.get(str(run_id), [])
+
+    def insert_event(self, event: Any) -> None:
+        pass
+
+    def insert_events(self, events: list[Any]) -> None:
+        pass
 
 
 @pytest.fixture(autouse=True)
 def _ch():
-    app.dependency_overrides[get_clickhouse] = lambda: FakeClickHouse()
+    app.dependency_overrides[get_trace_store] = lambda: FakeTraceStore()
     yield
-    app.dependency_overrides.pop(get_clickhouse, None)
+    app.dependency_overrides.pop(get_trace_store, None)
 
 
 def _use_ch(by_run: dict[str, list[tuple[Any, ...]]]) -> None:
-    app.dependency_overrides[get_clickhouse] = lambda: FakeClickHouse(by_run)
+    app.dependency_overrides[get_trace_store] = lambda: FakeTraceStore(by_run)
 
 
 def _make_run(db_session, **fields: Any) -> WorkflowRun:

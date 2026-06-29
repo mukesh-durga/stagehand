@@ -9,14 +9,13 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
-from clickhouse_connect.driver.client import Client
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.clickhouse import ensure_trace_table, query_run_trace_events
 from app.db.models.eval import EvalResult
 from app.db.models.run import WorkflowRun
 from app.db.repositories.run_repository import RunRepository
+from app.db.trace_store import TraceStore
 from app.schemas.eval import DEFAULT_EVAL_TYPES, EVAL_TYPES, EvalRequest, EvalResultResponse
 from app.services import routing_service
 from app.services.diff_service import _rows_to_dicts
@@ -179,7 +178,7 @@ EVALUATORS: dict[str, Callable[[WorkflowRun, list[dict], EvalRequest], dict[str,
 
 def run_eval(
     db: Session,
-    clickhouse_client: Client,
+    store: TraceStore,
     run_id: uuid.UUID,
     request: EvalRequest,
 ) -> list[EvalResultResponse]:
@@ -201,8 +200,8 @@ def run_eval(
     )
 
     # Trace events are needed for tool_usage and for routing-stats updates.
-    ensure_trace_table(clickhouse_client)
-    events = _rows_to_dicts(query_run_trace_events(clickhouse_client, str(run_id)))
+    store.ensure_ready()
+    events = _rows_to_dicts(store.get_events_by_run_id(run_id))
 
     rows: list[EvalResult] = []
     for eval_type in eval_types:

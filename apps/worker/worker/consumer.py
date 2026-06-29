@@ -29,9 +29,12 @@ _UNSET = object()
 def _build_clickhouse() -> Any | None:
     """Create a ClickHouse client and ensure the trace table exists.
 
-    Returns None (with a warning) if ClickHouse is unavailable, so the worker
-    still runs without trace persistence.
+    Returns None when ClickHouse is disabled (CLICKHOUSE_ENABLED=false) or
+    unavailable, so the worker still runs without ClickHouse trace persistence.
     """
+    if not get_settings().clickhouse_enabled:
+        logger.info("ClickHouse disabled (CLICKHOUSE_ENABLED=false); skipping")
+        return None
     try:
         client = get_clickhouse()
         ensure_trace_table(client)
