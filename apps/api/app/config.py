@@ -23,8 +23,38 @@ _MODE_DEFAULTS = {
     },
 }
 
-# Root .env lives at the repo root: apps/api/app/config.py -> parents[3] == repo root.
-_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
+def _candidate_env_files() -> tuple[str, ...]:
+    """Return existing `.env` paths to load, safe at any install depth.
+
+    Locally (monorepo) this finds the repo-root and apps/api `.env`; in the Docker
+    image the app lives at `/app`, where those deep parents don't exist — so we
+    never index a parent that isn't there. `.env` files are optional: on Render the
+    process environment provides everything, so an empty result is fine.
+    """
+    parents = Path(__file__).resolve().parents  # apps/api/app/config.py -> [...]
+    candidates: list[Path] = []
+    # Repo-root .env (monorepo layout: config.py -> parents[3] == repo root).
+    if len(parents) > 3:
+        candidates.append(parents[3] / ".env")
+    # apps/api/.env (one level above the `app` package; /app/.env in Docker).
+    if len(parents) > 1:
+        candidates.append(parents[1] / ".env")
+    # Current working directory .env (e.g. when running from apps/api).
+    candidates.append(Path.cwd() / ".env")
+
+    seen: set[str] = set()
+    existing: list[str] = []
+    for path in candidates:
+        key = str(path)
+        if key not in seen:
+            seen.add(key)
+            if path.is_file():
+                existing.append(key)
+    return tuple(existing)
+
+
+# Loaded once at import; env files are optional (process env vars still apply).
+_ENV_FILES = _candidate_env_files()
 
 
 def _normalize_database_url(url: str) -> str:
@@ -50,7 +80,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=(str(_ROOT_ENV), ".env"),
+        env_file=_ENV_FILES,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

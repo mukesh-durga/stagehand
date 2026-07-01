@@ -1,5 +1,6 @@
 """Tests for configuration loading."""
 
+import app.config as config_mod
 from app.config import Settings, get_settings
 
 
@@ -53,3 +54,18 @@ def test_cors_origins_includes_localhost_and_extras() -> None:
 
 def test_get_settings_is_cached() -> None:
     assert get_settings() is get_settings()
+
+
+def test_candidate_env_files_safe_at_shallow_path(monkeypatch) -> None:
+    """Building env-file candidates must not IndexError when packaged shallowly.
+
+    In the Docker image the module lives at /app/app/config.py, so `parents[3]`
+    (the monorepo repo root) does not exist. Previously this crashed at import.
+    """
+    # Shallow (Docker) layout and an even shallower path — neither may raise.
+    for fake in ("/app/app/config.py", "/config.py"):
+        monkeypatch.setattr(config_mod, "__file__", fake)
+        result = config_mod._candidate_env_files()
+        assert isinstance(result, tuple)
+        # Settings must still construct with those env-file candidates.
+        assert Settings(_env_file=result or None).app_env
