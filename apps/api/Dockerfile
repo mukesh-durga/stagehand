@@ -19,17 +19,20 @@ RUN apt-get update \
 COPY pyproject.toml ./
 RUN pip install --upgrade pip && pip install .
 
-# Application code + migrations.
+# Application code + migrations + startup script.
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./alembic.ini
+COPY start.sh ./start.sh
 
 # Run as a non-root user.
-RUN useradd --create-home --uid 10001 appuser \
+RUN chmod +x ./start.sh \
+    && useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
 
-# Render/Railway/Fly inject $PORT; default to 8000 locally.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Startup (migrations + uvicorn) is baked into start.sh, so Render needs NO custom
+# Docker Command — leave that field blank. $PORT is injected by the host.
+CMD ["./start.sh"]
