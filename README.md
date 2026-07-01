@@ -36,7 +36,7 @@ stagehand/
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml     # postgres, redis, clickhouse (local dev)
-├── render.yaml            # Render Blueprint (API + worker)
+├── render.yaml            # Render Blueprint (free hosted demo: API only)
 ├── Makefile               # convenience commands
 ├── scripts/               # deploy_api.sh, start_worker.sh
 ├── apps/
@@ -271,8 +271,10 @@ Stagehand is **local-first** but deployment-ready. The reference topology:
 | Redis | Upstash (`REDIS_URL`) |
 | ClickHouse | ClickHouse Cloud (`CLICKHOUSE_*`, `CLICKHOUSE_SECURE=true`) |
 
-- One-click infra via the [`render.yaml`](./render.yaml) Blueprint (API + worker).
-  Railway and Fly.io use the same Dockerfiles.
+- The [`render.yaml`](./render.yaml) Blueprint deploys the **free hosted demo**
+  (API only, no worker, no ClickHouse). The full-stack topology above (with worker
+  + ClickHouse) is a manual Render/Railway/Fly setup — see
+  [`docs/deployment.md`](./docs/deployment.md). All use the same Dockerfiles.
 - Frontend deploy config in [`apps/web/vercel.json`](./apps/web/vercel.json).
 - Manual deploy helpers: [`scripts/deploy_api.sh`](./scripts/deploy_api.sh)
   (installs deps → `alembic upgrade head` → uvicorn) and

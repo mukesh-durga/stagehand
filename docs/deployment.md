@@ -84,12 +84,12 @@ git push origin main
   (`ensure_trace_table`); no manual schema step is required. You may also apply
   `infra/clickhouse/schema.sql` ahead of time.
 
-### 5. Deploy the API service
-**Option A — Blueprint (recommended):** in Render, **New → Blueprint** and point at
-this repo. `render.yaml` defines `stagehand-api` and `stagehand-worker`. Fill in the
-`sync: false` secrets in the dashboard.
+> **Deploying the free demo instead?** The `render.yaml` Blueprint at the repo root
+> is the **free hosted demo** (API only, no worker, no ClickHouse). Skip this
+> full-stack section and use [§H](#h-free-hosted-demo-mode-no-cost-linkedin-demo).
 
-**Option B — Manual web service:**
+### 5. Deploy the API service
+**Manual web service** (full production, with worker + ClickHouse):
 - Environment: **Docker**
 - Dockerfile path: `apps/api/Dockerfile`, Docker context: `apps/api`
 - Health check path: `/health`
@@ -98,7 +98,7 @@ this repo. `render.yaml` defines `stagehand-api` and `stagehand-worker`. Fill in
 - Add the API env vars from [§D](#d-required-environment-variables).
 
 ### 6. Run migrations
-- With the Blueprint, the API's **pre-deploy command** (`alembic upgrade head`) runs
+- Set the API service's **pre-deploy command** to `alembic upgrade head` so it runs
   automatically on every deploy.
 - Manually (any host) you can run [`scripts/deploy_api.sh`](../scripts/deploy_api.sh),
   which installs deps, runs `alembic upgrade head`, then starts uvicorn.
@@ -259,6 +259,24 @@ Graceful degradation:
 
 > **First request may be slow.** Render free web services sleep after inactivity and
 > cold-start on the next request (~30–60s). This is expected on the free tier.
+
+### Deploy steps (free demo)
+
+The `render.yaml` Blueprint at the repo root **is** the free-demo config — it deploys
+only the API on the free plan with all the hosted-demo values baked in.
+
+1. **Render → New → Blueprint → point at this repo.** It creates one service,
+   `stagehand-api` (free plan, `/health` check, `alembic upgrade head` pre-deploy).
+2. **Do not** deploy the worker — hosted demo runs execution inside the API.
+3. **Do not** configure ClickHouse — it is disabled; traces go to Postgres.
+4. Create a **Neon** Postgres DB → set `DATABASE_URL` (the only DB you need).
+5. Create an **Upstash** Redis DB → set `REDIS_URL` (live WebSocket streaming).
+6. Set `FRONTEND_URL` / `BACKEND_CORS_ORIGINS` to your **Vercel** URL.
+7. Deploy the frontend on **Vercel** (root `apps/web`; see [§8](#8-deploy-the-frontend-vercel)).
+
+The four `sync: false` values (`DATABASE_URL`, `REDIS_URL`, `FRONTEND_URL`,
+`BACKEND_CORS_ORIGINS`) are the only ones you set in the dashboard — everything else
+is committed in `render.yaml`.
 
 ### Render env vars for the free demo (API)
 

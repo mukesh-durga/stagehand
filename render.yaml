@@ -1,19 +1,26 @@
-# Render Blueprint for Stagehand (https://render.com/docs/blueprint-spec).
+# Render Blueprint — Stagehand FREE HOSTED DEMO (https://render.com/docs/blueprint-spec).
 #
-# Deploys the API (web service) and worker (background service) from their
-# Dockerfiles. Postgres (Neon/Supabase), Redis (Upstash), and ClickHouse
-# (ClickHouse Cloud) are external managed services — set their connection
-# strings as env vars in the Render dashboard (sync: false = secret, not in git).
+# This blueprint deploys the NO-COST demo:
+#   - Deploys ONLY the API web service (Docker), on Render's free plan.
+#   - The frontend is deployed separately on Vercel (see apps/web/vercel.json).
+#   - Database is Neon Postgres          -> DATABASE_URL
+#   - Redis is Upstash                   -> REDIS_URL (live WebSocket trace fanout)
+#   - ClickHouse is DISABLED in hosted_demo mode (traces stored in Postgres).
+#   - The separate worker is DISABLED; the API runs short mock demo runs itself
+#     via a background task (HOSTED_DEMO_EXECUTION=true).
+#   - AI and billing are mock only — no real provider or Stripe keys.
 #
-# Apply with: Render Dashboard -> New -> Blueprint -> point at this repo.
+# The full local architecture still supports the worker + ClickHouse via
+# docker-compose (DEPLOYMENT_MODE=local); this file is intentionally the free
+# demo only. Apply with: Render Dashboard -> New -> Blueprint -> this repo.
 # Secrets are NEVER committed here; every secret uses `sync: false`.
 
 services:
-  # ---- API (FastAPI) ----
+  # ---- API (FastAPI) — the only service in hosted demo mode ----
   - type: web
     name: stagehand-api
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: ./apps/api
     healthCheckPath: /health
@@ -22,80 +29,34 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      # Hosted demo mode: no ClickHouse, no worker, Postgres trace fallback.
+      - key: DEPLOYMENT_MODE
+        value: hosted_demo
+      - key: CLICKHOUSE_ENABLED
+        value: "false"
+      - key: WORKER_ENABLED
+        value: "false"
+      - key: HOSTED_DEMO_EXECUTION
+        value: "true"
+      - key: TRACE_STORAGE
+        value: postgres
+      # Mock AI + mock billing — no real keys or charges.
+      - key: AI_PROVIDER
+        value: mock
+      - key: BILLING_MODE
+        value: mock
+      - key: CHEAP_MODEL_NAME
+        value: mock-cheap
+      - key: STRONG_MODEL_NAME
+        value: mock-strong
+      - key: DEFAULT_EVAL_MODEL_NAME
+        value: mock-cheap
+      # Set these in the Render dashboard (not committed).
       - key: FRONTEND_URL
         sync: false # e.g. https://stagehand.vercel.app
       - key: BACKEND_CORS_ORIGINS
         sync: false # comma-separated extra origins, if any
       - key: DATABASE_URL
-        sync: false # Neon/Supabase connection string
+        sync: false # Neon connection string
       - key: REDIS_URL
         sync: false # Upstash rediss:// URL
-      - key: CLICKHOUSE_HOST
-        sync: false
-      - key: CLICKHOUSE_PORT
-        value: "8443"
-      - key: CLICKHOUSE_USER
-        sync: false
-      - key: CLICKHOUSE_PASSWORD
-        sync: false
-      - key: CLICKHOUSE_DATABASE
-        value: stagehand
-      - key: CLICKHOUSE_SECURE
-        value: "true"
-      - key: BILLING_MODE
-        value: mock
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: CHEAP_MODEL_NAME
-        sync: false
-      - key: STRONG_MODEL_NAME
-        sync: false
-      - key: DEFAULT_EVAL_MODEL_NAME
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: STRIPE_PRICE_ID
-        sync: false
-
-  # ---- Worker (engine + run consumer) ----
-  - type: worker
-    name: stagehand-worker
-    runtime: docker
-    plan: starter
-    dockerfilePath: ./apps/worker/Dockerfile
-    dockerContext: ./apps/worker
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        sync: false
-      - key: CLICKHOUSE_HOST
-        sync: false
-      - key: CLICKHOUSE_PORT
-        value: "8443"
-      - key: CLICKHOUSE_USER
-        sync: false
-      - key: CLICKHOUSE_PASSWORD
-        sync: false
-      - key: CLICKHOUSE_DATABASE
-        value: stagehand
-      - key: CLICKHOUSE_SECURE
-        value: "true"
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: CHEAP_MODEL_NAME
-        sync: false
-      - key: STRONG_MODEL_NAME
-        sync: false
-      - key: DEFAULT_EVAL_MODEL_NAME
-        sync: false
-      - key: UCB_EXPLORATION_WEIGHT
-        value: "1.0"
-      - key: BILLING_MODE
-        value: mock
