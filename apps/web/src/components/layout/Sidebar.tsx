@@ -7,7 +7,7 @@ import {
   Split,
   Workflow,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
@@ -24,10 +24,15 @@ const navItems = [
 export function Sidebar() {
   return (
     <aside className="flex w-56 flex-col border-r border-border bg-card">
-      <div className="flex h-14 items-center gap-2 border-b border-border px-5">
+      <Link
+        to="/dashboard"
+        title="Go to dashboard"
+        aria-label="Go to dashboard"
+        className="flex h-14 items-center gap-2 border-b border-border px-5 transition-colors hover:bg-secondary"
+      >
         <Workflow className="h-5 w-5 text-primary" />
         <span className="font-semibold">Stagehand</span>
-      </div>
+      </Link>
       <nav className="flex flex-col gap-1 p-3">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
