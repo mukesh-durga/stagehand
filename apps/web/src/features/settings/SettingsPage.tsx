@@ -4,13 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_BASE_URL } from "@/lib/api";
-import { leaveDemo } from "@/lib/demo";
+import { signOut } from "@/lib/auth";
 
 export function SettingsPage() {
   const navigate = useNavigate();
 
-  const handleLeaveDemo = () => {
-    leaveDemo();
+  const handleSignOut = () => {
+    signOut();
     navigate("/");
   };
 
@@ -41,7 +41,7 @@ export function SettingsPage() {
           <p className="text-muted-foreground">
             Sign out of this workspace and return to the public site.
           </p>
-          <Button variant="outline" className="w-fit" onClick={handleLeaveDemo}>
+          <Button variant="outline" className="w-fit" onClick={handleSignOut}>
             <LogOut className="h-4 w-4" />
             Sign out
           </Button>

@@ -12,7 +12,6 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { enterDemo } from "@/lib/demo";
 
 const navLinks = [
   { label: "Product", href: "#product" },
@@ -45,11 +44,6 @@ const linkButton =
 
 export function LandingPage() {
   const navigate = useNavigate();
-
-  const enter = () => {
-    enterDemo();
-    navigate("/dashboard");
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -100,13 +94,10 @@ export function LandingPage() {
             outputs, and tracking usage.
           </p>
           <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row">
-            <Button size="md" className="h-11 px-6 text-base shadow-lg shadow-primary/20" onClick={enter}>
-              Enter
+            <Button size="md" className="h-11 px-6 text-base shadow-lg shadow-primary/20" onClick={() => navigate("/signup")}>
+              Get Started
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <button className={`${linkButton} h-11 px-6 text-base`} onClick={() => navigate("/signup")}>
-              Get Started
-            </button>
             <a href="#features" className={`${linkButton} h-11 px-6 text-base`}>
               View Features
             </a>
@@ -168,12 +159,12 @@ export function LandingPage() {
           Jump into the workspace and start building, running, and debugging workflows.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button size="md" className="h-11 px-6 text-base shadow-lg shadow-primary/20" onClick={enter}>
-            Enter
+          <Button size="md" className="h-11 px-6 text-base shadow-lg shadow-primary/20" onClick={() => navigate("/signup")}>
+            Get Started
             <ArrowRight className="h-4 w-4" />
           </Button>
-          <Link to="/signup" className={`${linkButton} h-11 px-6 text-base`}>
-            Create an account
+          <Link to="/signin" className={`${linkButton} h-11 px-6 text-base`}>
+            Sign In
           </Link>
         </div>
       </section>

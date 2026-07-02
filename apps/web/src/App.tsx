@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { BuilderPage } from "@/features/builder/BuilderPage";
@@ -14,6 +14,16 @@ import { RunDiffPage } from "@/features/runs/RunDiffPage";
 import { RunsListPage } from "@/features/runs/RunsListPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { WorkflowsPage } from "@/features/workflows/WorkflowsPage";
+import { isAuthed } from "@/lib/auth";
+
+/**
+ * Frontend-only route guard: app routes require the local auth flag. Unauthed
+ * visitors are sent to /signin. This is not real security — just a clean
+ * separation between the public site and the app.
+ */
+function RequireAuth() {
+  return isAuthed() ? <Outlet /> : <Navigate to="/signin" replace />;
+}
 
 export function App() {
   return (
@@ -25,21 +35,22 @@ export function App() {
       {/* Back-compat: the old /login route now points at sign in. */}
       <Route path="/login" element={<Navigate to="/signin" replace />} />
 
-      {/* App pages (inside the sidebar/header shell). Not route-guarded so deep
-          links keep working; the landing/auth pages drive demo entry. */}
-      <Route element={<AppShell />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/workflows" element={<WorkflowsPage />} />
-        <Route path="/workflows/new" element={<BuilderPage />} />
-        <Route path="/workflows/:workflowId/builder" element={<BuilderPage />} />
-        <Route path="/runs" element={<RunsListPage />} />
-        <Route path="/runs/:runId" element={<RunDetailPage />} />
-        <Route path="/runs/:runId/diff/:otherRunId" element={<RunDiffPage />} />
-        <Route path="/routing" element={<RoutingPage />} />
-        <Route path="/templates" element={<TemplatesPage />} />
-        <Route path="/usage" element={<UsagePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* App pages — require the local auth flag; unauthed users go to /signin. */}
+      <Route element={<RequireAuth />}>
+        <Route element={<AppShell />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/workflows" element={<WorkflowsPage />} />
+          <Route path="/workflows/new" element={<BuilderPage />} />
+          <Route path="/workflows/:workflowId/builder" element={<BuilderPage />} />
+          <Route path="/runs" element={<RunsListPage />} />
+          <Route path="/runs/:runId" element={<RunDetailPage />} />
+          <Route path="/runs/:runId/diff/:otherRunId" element={<RunDiffPage />} />
+          <Route path="/routing" element={<RoutingPage />} />
+          <Route path="/templates" element={<TemplatesPage />} />
+          <Route path="/usage" element={<UsagePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
       </Route>
     </Routes>
   );
