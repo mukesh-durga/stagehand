@@ -292,11 +292,18 @@ AI_PROVIDER=mock
 CHEAP_MODEL_NAME=mock-cheap
 STRONG_MODEL_NAME=mock-strong
 DEFAULT_EVAL_MODEL_NAME=mock-cheap
+JWT_SECRET_KEY=<strong-random-secret>   # required in production (e.g. openssl rand -hex 32)
+JWT_ALGORITHM=HS256
+JWT_EXPIRES_MINUTES=1440
 DATABASE_URL=<Neon URL>
 REDIS_URL=<Upstash URL>
 FRONTEND_URL=<Vercel URL>
 BACKEND_CORS_ORIGINS=<Vercel URL>
 ```
+
+> **Auth note:** signup/signin now create real users in Postgres (bcrypt-hashed
+> passwords, JWT access tokens). The `users` table is created by the `0010_users`
+> migration, which runs automatically via `alembic upgrade head` in `start.sh`.
 
 Setting `DEPLOYMENT_MODE=hosted_demo` alone applies the `CLICKHOUSE_ENABLED`/
 `WORKER_ENABLED`/`HOSTED_DEMO_EXECUTION`/`TRACE_STORAGE` defaults above — they are

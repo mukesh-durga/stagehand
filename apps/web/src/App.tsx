@@ -14,15 +14,14 @@ import { RunDiffPage } from "@/features/runs/RunDiffPage";
 import { RunsListPage } from "@/features/runs/RunsListPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { WorkflowsPage } from "@/features/workflows/WorkflowsPage";
-import { isAuthed } from "@/lib/auth";
+import { isAuthenticated } from "@/lib/auth";
 
 /**
- * Frontend-only route guard: app routes require the local auth flag. Unauthed
- * visitors are sent to /signin. This is not real security — just a clean
- * separation between the public site and the app.
+ * Route guard: app routes require a stored access token. Unauthenticated
+ * visitors are sent to /signin.
  */
 function RequireAuth() {
-  return isAuthed() ? <Outlet /> : <Navigate to="/signin" replace />;
+  return isAuthenticated() ? <Outlet /> : <Navigate to="/signin" replace />;
 }
 
 export function App() {

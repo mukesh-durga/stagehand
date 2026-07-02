@@ -23,3 +23,15 @@ class RunNotEvaluatableError(Exception):
 
 class UnknownEvalTypeError(Exception):
     """Raised when an unknown eval type is requested (-> HTTP 400)."""
+
+
+class EmailAlreadyExistsError(Exception):
+    """Raised when signing up with an email that already exists (-> HTTP 409)."""
+
+
+class InvalidCredentialsError(Exception):
+    """Raised when signin credentials are invalid (-> HTTP 401)."""
+
+
+class InvalidTokenError(Exception):
+    """Raised when a bearer token is missing or invalid (-> HTTP 401)."""

@@ -1,33 +1,50 @@
 /**
- * Frontend-only auth flag.
+ * Client-side auth session backed by a real backend JWT.
  *
- * This is NOT real authentication — there is no backend, session, or token. It
- * only records that the visitor "signed in" so app routes can be gated and the
- * public site stays separate. localStorage access is guarded so private-mode or
- * SSR quirks never crash the app.
+ * The token is issued by the API (/auth/signup, /auth/signin) and stored in
+ * localStorage. Route guards use token presence; API requests attach it as a
+ * Bearer header. localStorage access is guarded so private-mode/SSR never crash.
  */
-export const AUTH_KEY = "stagehand_auth";
+import type { AuthUser } from "@/types";
 
-export function isAuthed(): boolean {
+export const TOKEN_KEY = "stagehand_access_token";
+export const USER_KEY = "stagehand_user";
+
+export function getToken(): string | null {
   try {
-    return localStorage.getItem(AUTH_KEY) === "true";
+    return localStorage.getItem(TOKEN_KEY);
   } catch {
-    return false;
+    return null;
   }
 }
 
-export function signIn(): void {
+export function getCurrentUser(): AuthUser | null {
   try {
-    localStorage.setItem(AUTH_KEY, "true");
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? (JSON.parse(raw) as AuthUser) : null;
   } catch {
-    // Ignore storage failures — signing in must never block navigation.
+    return null;
   }
 }
 
-export function signOut(): void {
+export function setSession(token: string, user: AuthUser): void {
   try {
-    localStorage.removeItem(AUTH_KEY);
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
   } catch {
-    // Ignore storage failures — signing out must never block navigation.
+    // Ignore storage failures — a failed write must never block navigation.
   }
+}
+
+export function clearSession(): void {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function isAuthenticated(): boolean {
+  return getToken() !== null;
 }

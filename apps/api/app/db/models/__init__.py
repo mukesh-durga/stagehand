@@ -6,6 +6,7 @@ from app.db.models.run import WorkflowRun
 from app.db.models.template import Template
 from app.db.models.trace import TraceEventPg
 from app.db.models.usage import BillingCustomer, UsageEvent
+from app.db.models.user import User
 from app.db.models.workflow import Workflow, WorkflowVersion
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "TraceEventPg",
     "UsageEvent",
     "BillingCustomer",
+    "User",
 ]

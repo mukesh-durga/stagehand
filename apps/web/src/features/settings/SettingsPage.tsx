@@ -4,13 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_BASE_URL } from "@/lib/api";
-import { signOut } from "@/lib/auth";
+import { clearSession, getCurrentUser } from "@/lib/auth";
 
 export function SettingsPage() {
   const navigate = useNavigate();
+  const user = getCurrentUser();
 
   const handleSignOut = () => {
-    signOut();
+    clearSession();
     navigate("/");
   };
 
@@ -38,6 +39,12 @@ export function SettingsPage() {
           <CardTitle>Session</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm">
+          {user && (
+            <p>
+              Signed in as <span className="font-medium">{user.name}</span>{" "}
+              <span className="text-muted-foreground">({user.email})</span>
+            </p>
+          )}
           <p className="text-muted-foreground">
             Sign out of this workspace and return to the public site.
           </p>

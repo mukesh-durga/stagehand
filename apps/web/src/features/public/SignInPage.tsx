@@ -1,23 +1,35 @@
-import { Workflow } from "lucide-react";
-import { type FormEvent } from "react";
+import { AlertCircle, Loader2, Workflow } from "lucide-react";
+import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signIn } from "@/lib/auth";
+import { ApiError, authSignin } from "@/lib/api";
+import { setSession } from "@/lib/auth";
 
 export function SignInPage() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const enter = () => {
-    signIn();
-    navigate("/dashboard");
-  };
-
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    enter();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await authSignin({ email, password });
+      setSession(res.access_token, res.user);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -34,27 +46,43 @@ export function SignInPage() {
         <div className="rounded-xl border border-border bg-card p-6 shadow-lg">
           <h1 className="text-center text-xl font-semibold tracking-tight">Sign in to Stagehand</h1>
 
+          {error && (
+            <div className="mt-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form className="mt-6 flex flex-col gap-4" onSubmit={onSubmit}>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" autoComplete="email" />
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" autoComplete="current-password" />
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
             </div>
-            <Button type="submit" className="mt-1 h-10">Sign In</Button>
+            <Button type="submit" className="mt-1 h-10" disabled={submitting}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Sign In
+            </Button>
           </form>
-
-          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            or
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button variant="outline" className="h-10 w-full" onClick={enter}>
-            Continue
-          </Button>
 
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}

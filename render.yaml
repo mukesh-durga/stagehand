@@ -51,6 +51,14 @@ services:
         value: mock-strong
       - key: DEFAULT_EVAL_MODEL_NAME
         value: mock-cheap
+      # Auth: JWT_SECRET_KEY is REQUIRED in production. Generate a strong random
+      # value and set it in the dashboard (never commit it).
+      - key: JWT_SECRET_KEY
+        sync: false # e.g. `openssl rand -hex 32`
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRES_MINUTES
+        value: "1440"
       # Set these in the Render dashboard (not committed).
       - key: FRONTEND_URL
         sync: false # e.g. https://stagehand.vercel.app

@@ -145,6 +145,14 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""
 
+    # Auth / JWT. In production JWT_SECRET_KEY is required; in dev a safe insecure
+    # default is filled so local runs and tests work without extra setup.
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    jwt_expires_minutes: int = 1440
+
+    _DEV_JWT_SECRET = "dev-insecure-jwt-secret-change-me"
+
     @model_validator(mode="after")
     def _apply_mode_defaults(self) -> "Settings":
         """Fill unset deployment flags from DEPLOYMENT_MODE defaults.
@@ -161,6 +169,12 @@ class Settings(BaseSettings):
             self.hosted_demo_execution = defaults["hosted_demo_execution"]
         if self.trace_storage is None:
             self.trace_storage = defaults["trace_storage"]
+
+        # Require a real JWT secret in production; allow a dev default otherwise.
+        if not self.jwt_secret_key:
+            if self.app_env == "production":
+                raise ValueError("JWT_SECRET_KEY is required when APP_ENV=production")
+            self.jwt_secret_key = self._DEV_JWT_SECRET
         return self
 
     @property

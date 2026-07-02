@@ -1,4 +1,5 @@
 import type {
+  AuthUser,
   BillingStatus,
   CheckoutSession,
   CloneTemplateRequest,
@@ -8,7 +9,10 @@ import type {
   HealthResponse,
   RoutingStat,
   RunDiffResponse,
+  SigninPayload,
+  SignupPayload,
   Template,
+  TokenResponse,
   TraceEvent,
   UsageEvent,
   UsageSummary,
@@ -18,6 +22,7 @@ import type {
   WorkflowUpdatePayload,
   WorkflowVersion,
 } from "@/types";
+import { getToken } from "@/lib/auth";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -34,12 +39,17 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((options.headers as Record<string, string> | undefined) ?? {}),
+  };
+
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
-      ...options,
-    });
+    res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
   } catch {
     throw new ApiError(0, "Cannot reach the backend API.");
   }
@@ -75,6 +85,26 @@ export function healthCheck(): Promise<HealthResponse> {
 
 export function dbHealthCheck(): Promise<DbHealthResponse> {
   return request<DbHealthResponse>("/health/db");
+}
+
+// --- auth ---
+
+export function authSignup(payload: SignupPayload): Promise<TokenResponse> {
+  return request<TokenResponse>("/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function authSignin(payload: SigninPayload): Promise<TokenResponse> {
+  return request<TokenResponse>("/auth/signin", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function authMe(): Promise<AuthUser> {
+  return request<AuthUser>("/auth/me");
 }
 
 // --- workflows ---
