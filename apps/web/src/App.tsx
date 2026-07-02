@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/AppShell";
-import { LoginPage } from "@/features/auth/LoginPage";
 import { BuilderPage } from "@/features/builder/BuilderPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { LandingPage } from "@/features/public/LandingPage";
+import { SignInPage } from "@/features/public/SignInPage";
+import { SignUpPage } from "@/features/public/SignUpPage";
 import { RoutingPage } from "@/features/routing/RoutingPage";
 import { TemplatesPage } from "@/features/templates/TemplatesPage";
 import { UsagePage } from "@/features/usage/UsagePage";
@@ -12,22 +14,19 @@ import { RunDiffPage } from "@/features/runs/RunDiffPage";
 import { RunsListPage } from "@/features/runs/RunsListPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 import { WorkflowsPage } from "@/features/workflows/WorkflowsPage";
-import { hasEnteredDemo } from "@/lib/demo";
-
-/**
- * Root redirect: send first-time visitors to the landing page, returning demo
- * visitors straight to the dashboard. This is the only "guard" — internal routes
- * are never blocked, so deep links keep working.
- */
-function RootRedirect() {
-  return <Navigate to={hasEnteredDemo() ? "/dashboard" : "/login"} replace />;
-}
 
 export function App() {
   return (
     <Routes>
-      <Route path="/" element={<RootRedirect />} />
-      <Route path="/login" element={<LoginPage />} />
+      {/* Public marketing + auth pages (no app shell). */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/signin" element={<SignInPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      {/* Back-compat: the old /login route now points at sign in. */}
+      <Route path="/login" element={<Navigate to="/signin" replace />} />
+
+      {/* App pages (inside the sidebar/header shell). Not route-guarded so deep
+          links keep working; the landing/auth pages drive demo entry. */}
       <Route element={<AppShell />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />

@@ -77,7 +77,7 @@ export function UsagePage() {
         <div>
           <h1 className="text-2xl font-semibold">Usage</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Workflow run, model, and tool usage. Test mode only — no real charges.
+            Workflow run, model, and tool usage across this workspace.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -121,13 +121,13 @@ export function UsagePage() {
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle>Billing</CardTitle>
                 <Badge variant={billing.mode === "stripe_test" ? "success" : "muted"}>
-                  {billing.mode === "stripe_test" ? "Stripe test mode" : "Mock billing mode"}
+                  {billing.mode === "stripe_test" ? "Billing enabled" : "Usage-only mode"}
                 </Badge>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
                 {billing.mode === "stripe_test"
-                  ? "Stripe test mode configured. Test checkout only — no real charges."
-                  : "Stripe test mode not configured. No real charges are made."}
+                  ? "Checkout is enabled for this workspace."
+                  : "Usage is tracked for this workspace."}
               </CardContent>
             </Card>
           )}

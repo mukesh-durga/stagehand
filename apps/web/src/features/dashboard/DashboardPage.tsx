@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, Info, RefreshCw } from "lucide-react";
+import { AlertCircle, ArrowRight, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -12,7 +12,7 @@ const metricCards = [
   { title: "Workflows", value: "—", hint: "Clone a template to create one" },
   { title: "Runs", value: "—", hint: "Run a workflow to see runs" },
   { title: "Failed Runs", value: "—", hint: "Nothing failed yet" },
-  { title: "Token Cost", value: "$0.00", hint: "Mock pricing, no real charges" },
+  { title: "Token Cost", value: "$0.00", hint: "Estimated across all runs" },
 ];
 
 const gettingStarted = [
@@ -61,13 +61,6 @@ export function DashboardPage() {
           A trace-first multi-agent workflow platform — visually design AI workflows,
           run them asynchronously, and debug every run through live execution traces.
         </p>
-      </div>
-
-      <div className="flex items-center gap-3 rounded-lg border border-border bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-        <Info className="h-4 w-4 shrink-0 text-primary" />
-        <span>
-          Hosted demo mode uses mock AI models and mock billing. No real charges.
-        </span>
       </div>
 
       {error && (

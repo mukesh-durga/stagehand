@@ -1,6 +1,7 @@
 import {
   Activity,
   CreditCard,
+  Globe,
   LayoutDashboard,
   LayoutTemplate,
   Settings,
@@ -52,6 +53,17 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="mt-auto p-3">
+        <Link
+          to="/"
+          title="Public site"
+          className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <Globe className="h-4 w-4" />
+          Public site
+        </Link>
+      </div>
     </aside>
   );
 }

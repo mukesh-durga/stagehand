@@ -23,3 +23,11 @@ export function enterDemo(): void {
     // Ignore storage failures — entering the demo must never block navigation.
   }
 }
+
+export function leaveDemo(): void {
+  try {
+    localStorage.removeItem(DEMO_ENTERED_KEY);
+  } catch {
+    // Ignore storage failures — leaving the demo must never block navigation.
+  }
+}
